@@ -1,0 +1,62 @@
+import dotenv from 'dotenv';
+
+dotenv.config({ path: ".env.local" });
+
+export interface Config {
+  network: 'mainnet' | 'testnet' | 'local';
+  ethereumRpcUrl: string;
+  ethereumPrivateKey: string;
+  contractAddress: string;
+  futuresContractAddress: string;
+  eigendaProxyUrl: string;
+  eigendaCommitmentMode: string;
+  port: number;
+  apiHost: string;
+  bybitWssUrl: string;
+  logLevel: string;
+  alertWebhookUrl?: string;
+  adminApiKey: string;
+  rateLimitWindowMs: number;
+  rateLimitMaxRequests: number;
+  defaultPriceSymbol: string;
+  /** Yellow Network - optional, enables Yellow integration */
+  yellowClearnodeWsUrl: string;
+  yellowPrivateKey: string | null;
+  yellowRelayerEnabled: boolean;
+}
+
+function getEnvVar(key: string, defaultValue?: string): string {
+  const value = process.env[key] || defaultValue;
+  if (!value) {
+    throw new Error(`Environment variable ${key} is required but not set`);
+  }
+  return value;
+}
+
+function getOptionalEnvVar(key: string, defaultValue: string): string {
+  return process.env[key] || defaultValue;
+}
+
+export const config: Config = {
+  network: (process.env.NETWORK || 'local') as 'mainnet' | 'testnet' | 'local',
+  ethereumRpcUrl: getOptionalEnvVar('ETHEREUM_RPC_URL', 'https://rpc.sepolia.org'),
+  ethereumPrivateKey: getEnvVar('ETHEREUM_SEPOLIA_PRIVATE_KEY'),
+  contractAddress: getEnvVar('CONTRACT_ADDRESS'),
+  futuresContractAddress: getEnvVar('FUTURES_CONTRACT_ADDRESS'),
+  eigendaProxyUrl: getOptionalEnvVar('EIGENDA_PROXY_URL', 'http://127.0.0.1:3100'),
+  eigendaCommitmentMode: getOptionalEnvVar('EIGENDA_COMMITMENT_MODE', 'standard'),
+  port: parseInt(process.env.PORT || '3001', 10),
+  apiHost: process.env.API_HOST || '0.0.0.0',
+  bybitWssUrl: getOptionalEnvVar('BYBIT_WSS_URL', 'wss://stream.bybit.com/v5/public/spot'),
+  logLevel: process.env.LOG_LEVEL || 'info',
+  alertWebhookUrl: process.env.ALERT_WEBHOOK_URL,
+  adminApiKey: getEnvVar('ADMIN_API_KEY'),
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
+  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10),
+  defaultPriceSymbol: getOptionalEnvVar('PRICE_SYMBOL', 'BTCUSDT'),
+  yellowClearnodeWsUrl: getOptionalEnvVar('YELLOW_CLEARNODE_WS_URL', 'wss://clearnet-sandbox.yellow.com/ws'),
+  yellowPrivateKey: process.env.YELLOW_RELAYER_PRIVATE_KEY || null,
+  yellowRelayerEnabled: process.env.YELLOW_RELAYER_ENABLED === 'true',
+};
+
+export default config;
