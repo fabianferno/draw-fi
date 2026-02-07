@@ -13,7 +13,7 @@ interface HeaderProps {
 export function Header({ showStatus, statusText }: HeaderProps) {
   return (
     <motion.header
-      className="sticky top-0 z-50 backdrop-blur-xl border-b-4 border-[#00E5FF] shadow-[0_4px_0_0_#0a0a0a]"
+      className="sticky top-0 z-50 backdrop-blur-xl  bg-[#00E5FF] shadow-[0_4px_0_0_#0a0a0a]"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -28,21 +28,18 @@ export function Header({ showStatus, statusText }: HeaderProps) {
               whileTap={{ scale: 0.95 }}
             >
               <div className="absolute inset-0 rounded-lg bg-[#00E5FF]/40 blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />
-              <h1 className="text-4xl font-venite px-2 bg-[#00E5FF] sm:px-4 md:px-6 py-2 sm:py-2 md:py-2 font-bold text-black">
+              <h1 className="text-4xl font-venite px-2 bg-black sm:px-4 md:px-6 py-2 sm:py-2 md:py-2 font-bold text-[#00E5FF]">
                 DW
               </h1>
             </motion.div>
             <div className="flex flex-col">
               <motion.h1
-                className="relative font-venite text-xl sm:text-2xl font-black tracking-[0.15em] text-[#00E5FF]"
-                style={{
-                  textShadow: '2px 2px 0 #0a0a0a, -1px -1px 0 #0a0a0a'
-                }}
+                className="relative font-venite text-xl sm:text-2xl font-black tracking-[0.15em] text-black"
                 whileHover={{ scale: 1.02 }}
               >
                 DRAW-FI
               </motion.h1>
-              <span className="text-[10px] font-bold text-[#00E5FF]/70 uppercase tracking-wider">
+              <span className="text-[10px] -mt-1 font-bold text-black uppercase tracking-wider">
                 Draw Your Futures
               </span>
             </div>
@@ -50,13 +47,13 @@ export function Header({ showStatus, statusText }: HeaderProps) {
 
           {/* Navigation */}
           <nav className="hidden sm:flex items-center md:gap-10 gap-4 uppercase italic font-venite">
-            <Link href="/predict" className="border-b-2 border-[#00E5FF] text-sm font-bold text-white/80 hover:text-[#00E5FF] transition-colors">
+            <Link href="/predict" className="border-b-2 border-black text-sm font-bold text-black/80 hover:text-red-700 transition-colors">
               Play
             </Link>
-            <Link href="/leaderboard" className="border-b-2 border-[#00E5FF] text-sm font-bold text-white/80 hover:text-[#00E5FF] transition-colors">
+            <Link href="/leaderboard" className="border-b-2 border-black text-sm font-bold text-black/80 hover:text-red-700 transition-colors">
               Leaderboard
             </Link>
-            <Link href="/history" className="border-b-2 border-[#00E5FF] text-sm font-bold text-white/80 hover:text-[#00E5FF] transition-colors">
+            <Link href="/history" className="border-b-2 border-black text-sm font-bold text-black/80 hover:text-red-700 transition-colors">
               History
             </Link>
           </nav>

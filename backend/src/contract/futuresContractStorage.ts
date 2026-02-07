@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import logger from '../utils/logger.js';
 import config from '../config/config.js';
+import { getEthereumProvider } from '../ethereumProvider.js';
 
 /**
  * Position data structure matching the contract
@@ -33,12 +34,12 @@ const LINEFUTURES_ABI = [
   'function pnlServer() external view returns (address)',
   'function feePercentage() external view returns (uint256)',
   'function collectedFees() external view returns (uint256)',
-  
+
   // Write functions
   'function openPosition(uint16 _leverage, string _predictionCommitmentId) external payable returns (uint256)',
   'function batchOpenPositions(uint16 _leverage, string[] _predictionCommitmentIds) external payable returns (uint256[])',
   'function closePosition(uint256 _positionId, int256 _pnl, string _actualPriceCommitmentId) external',
-  
+
   // Events
   'event PositionOpened(uint256 indexed positionId, address indexed user, uint256 amount, uint16 leverage, uint256 timestamp, string predictionCommitmentId)',
   'event PositionClosed(uint256 indexed positionId, address indexed user, int256 pnl, uint256 finalAmount, string actualPriceCommitmentId, uint256 timestamp)'
@@ -49,18 +50,18 @@ const LINEFUTURES_ABI = [
  * Wrapper for LineFutures contract interactions
  */
 export class FuturesContractStorage {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.Provider;
   private wallet: ethers.Wallet;
   private contract: ethers.Contract;
   private contractAddress: string;
 
   constructor(
-    rpcUrl: string = config.ethereumRpcUrl,
+    _rpcUrl?: string,
     privateKey: string = config.ethereumPrivateKey,
     contractAddress: string = config.futuresContractAddress
   ) {
     this.contractAddress = contractAddress;
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.provider = getEthereumProvider();
     this.wallet = new ethers.Wallet(privateKey, this.provider);
     this.contract = new ethers.Contract(contractAddress, LINEFUTURES_ABI, this.wallet);
 
@@ -160,10 +161,10 @@ export class FuturesContractStorage {
 
         // Get current fee data
         const feeData = await this.provider.getFeeData();
-        
+
         // Bump gas price for retries (10% increase per attempt)
         const gasPriceMultiplier = 100n + (BigInt(attempt) * 10n); // 100%, 110%, 120%
-        const gasPrice = feeData.gasPrice 
+        const gasPrice = feeData.gasPrice
           ? (feeData.gasPrice * gasPriceMultiplier) / 100n
           : undefined;
 
@@ -210,7 +211,7 @@ export class FuturesContractStorage {
       } catch (error: any) {
         const errorCode = error?.code;
         const errorMessage = error?.message || String(error);
-        const isReplacementError = 
+        const isReplacementError =
           errorCode === 'REPLACEMENT_UNDERPRICED' ||
           errorMessage.includes('replacement transaction underpriced') ||
           errorMessage.includes('replacement fee too low');
@@ -225,14 +226,14 @@ export class FuturesContractStorage {
             delay,
             error: errorMessage
           });
-          
+
           await new Promise(resolve => setTimeout(resolve, delay));
           continue; // Retry with higher gas price
         }
 
         // If it's the last attempt or a different error, throw
-        logger.error('Failed to close position', { 
-          positionId, 
+        logger.error('Failed to close position', {
+          positionId,
           attempt: attempt + 1,
           maxRetries,
           error,

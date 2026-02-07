@@ -12,7 +12,7 @@ describe("LineFutures", function () {
   let user1: HardhatEthersSigner;
   let user2: HardhatEthersSigner;
 
-  const MIN_AMOUNT = hre.ethers.parseEther("10");
+  const MIN_AMOUNT = hre.ethers.parseEther("0.001");
   const TEST_COMMITMENT = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("test_prediction"));
   const ACTUAL_COMMITMENT = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("actual_prices"));
 
@@ -74,7 +74,7 @@ describe("LineFutures", function () {
     });
 
     it("Should reject position below minimum amount", async function () {
-      const lowAmount = hre.ethers.parseEther("5");
+      const lowAmount = hre.ethers.parseEther("0.0001");
       await expect(
         lineFutures.connect(user1).openPosition(10, TEST_COMMITMENT, { value: lowAmount })
       ).to.be.revertedWith("LineFutures: amount below minimum");
@@ -110,17 +110,17 @@ describe("LineFutures", function () {
 
     it("Should increment position counter", async function () {
       expect(await lineFutures.positionCounter()).to.equal(0);
-      
+
       await lineFutures.connect(user1).openPosition(10, TEST_COMMITMENT, { value: MIN_AMOUNT });
       expect(await lineFutures.positionCounter()).to.equal(1);
-      
+
       await lineFutures.connect(user2).openPosition(5, TEST_COMMITMENT, { value: MIN_AMOUNT });
       expect(await lineFutures.positionCounter()).to.equal(2);
     });
 
     it("Should reject when contract is paused", async function () {
       await lineFutures.connect(owner).pause();
-      
+
       await expect(
         lineFutures.connect(user1).openPosition(10, TEST_COMMITMENT, { value: MIN_AMOUNT })
       ).to.be.revertedWith("LineFutures: contract is paused");
@@ -132,7 +132,7 @@ describe("LineFutures", function () {
       const commitmentIds = [TEST_COMMITMENT];
       const totalAmount = MIN_AMOUNT;
       const baseTimestamp = await time.latest();
-      
+
       const tx = await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: totalAmount
       });
@@ -154,7 +154,7 @@ describe("LineFutures", function () {
       const commitmentIds = [TEST_COMMITMENT, TEST_COMMITMENT, TEST_COMMITMENT];
       const totalAmount = MIN_AMOUNT * 3n;
       const amountPerPosition = totalAmount / 3n;
-      
+
       const tx = await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: totalAmount
       });
@@ -197,7 +197,7 @@ describe("LineFutures", function () {
       const totalAmount = MIN_AMOUNT * 5n;
       const amountPerPosition = totalAmount / 5n;
       const baseTimestamp = await time.latest();
-      
+
       const tx = await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: totalAmount
       });
@@ -220,20 +220,20 @@ describe("LineFutures", function () {
       const totalAmount = MIN_AMOUNT * 2n + 1000n; // Add 1000 wei remainder
       const amountPerPosition = totalAmount / 2n;
       const remainder = totalAmount % 2n;
-      
+
       const balanceBefore = await hre.ethers.provider.getBalance(user1.address);
-      
+
       const tx = await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: totalAmount
       });
       const receipt = await tx.wait();
       const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
-      
+
       const balanceAfter = await hre.ethers.provider.getBalance(user1.address);
-      
+
       // User should have paid totalAmount - remainder (remainder was refunded)
       expect(balanceBefore - balanceAfter - gasUsed).to.equal(totalAmount - remainder);
-      
+
       // Check positions received equal split
       const position0 = await lineFutures.getPosition(0);
       const position1 = await lineFutures.getPosition(1);
@@ -259,7 +259,7 @@ describe("LineFutures", function () {
     it("Should reject batch with insufficient total amount", async function () {
       const commitmentIds = [TEST_COMMITMENT, TEST_COMMITMENT];
       const lowAmount = MIN_AMOUNT * 2n - 1n;
-      
+
       await expect(
         lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
           value: lowAmount
@@ -271,7 +271,7 @@ describe("LineFutures", function () {
       const commitmentIds = [TEST_COMMITMENT, TEST_COMMITMENT];
       // Total is enough, but per-position would be below minimum
       const lowAmount = MIN_AMOUNT * 2n - 1n;
-      
+
       await expect(
         lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
           value: lowAmount
@@ -281,7 +281,7 @@ describe("LineFutures", function () {
 
     it("Should reject batch with empty commitment ID", async function () {
       const commitmentIds = [TEST_COMMITMENT, ""];
-      
+
       await expect(
         lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
           value: MIN_AMOUNT * 2n
@@ -291,13 +291,13 @@ describe("LineFutures", function () {
 
     it("Should reject batch with invalid leverage", async function () {
       const commitmentIds = [TEST_COMMITMENT];
-      
+
       await expect(
         lineFutures.connect(user1).batchOpenPositions(0, commitmentIds, {
           value: MIN_AMOUNT
         })
       ).to.be.revertedWith("LineFutures: invalid leverage");
-      
+
       await expect(
         lineFutures.connect(user1).batchOpenPositions(2501, commitmentIds, {
           value: MIN_AMOUNT
@@ -307,7 +307,7 @@ describe("LineFutures", function () {
 
     it("Should reject batch when contract is paused", async function () {
       await lineFutures.connect(owner).pause();
-      
+
       await expect(
         lineFutures.connect(user1).batchOpenPositions(10, [TEST_COMMITMENT], {
           value: MIN_AMOUNT
@@ -322,39 +322,39 @@ describe("LineFutures", function () {
         TEST_COMMITMENT
       ];
       const totalAmount = MIN_AMOUNT * 3n;
-      
+
       await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: totalAmount
       });
 
       const baseTimestamp = await time.latest();
-      
+
       // Position 0 should be closable after 60 seconds
       await time.increase(60);
       expect(await lineFutures.canClosePosition(0)).to.equal(true);
       expect(await lineFutures.canClosePosition(1)).to.equal(false);
       expect(await lineFutures.canClosePosition(2)).to.equal(false);
-      
+
       // Position 1 should be closable after 120 seconds total
       await time.increase(60);
       expect(await lineFutures.canClosePosition(0)).to.equal(true);
       expect(await lineFutures.canClosePosition(1)).to.equal(true);
       expect(await lineFutures.canClosePosition(2)).to.equal(false);
-      
+
       // Position 2 should be closable after 180 seconds total
       await time.increase(60);
       expect(await lineFutures.canClosePosition(0)).to.equal(true);
       expect(await lineFutures.canClosePosition(1)).to.equal(true);
       expect(await lineFutures.canClosePosition(2)).to.equal(true);
-      
+
       // Close position 0
       await lineFutures.connect(pnlServer).closePosition(0, 0, ACTUAL_COMMITMENT);
       expect(await lineFutures.canClosePosition(0)).to.equal(false);
-      
+
       // Close position 1
       await lineFutures.connect(pnlServer).closePosition(1, 0, ACTUAL_COMMITMENT);
       expect(await lineFutures.canClosePosition(1)).to.equal(false);
-      
+
       // Close position 2
       await lineFutures.connect(pnlServer).closePosition(2, 0, ACTUAL_COMMITMENT);
       expect(await lineFutures.canClosePosition(2)).to.equal(false);
@@ -367,7 +367,7 @@ describe("LineFutures", function () {
         TEST_COMMITMENT
       ];
       const totalAmount = MIN_AMOUNT * 3n;
-      
+
       await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: totalAmount
       });
@@ -381,18 +381,18 @@ describe("LineFutures", function () {
 
     it("Should increment position counter correctly for batch", async function () {
       expect(await lineFutures.positionCounter()).to.equal(0);
-      
+
       const commitmentIds = [TEST_COMMITMENT, TEST_COMMITMENT];
       await lineFutures.connect(user1).batchOpenPositions(10, commitmentIds, {
         value: MIN_AMOUNT * 2n
       });
-      
+
       expect(await lineFutures.positionCounter()).to.equal(2);
-      
+
       await lineFutures.connect(user2).openPosition(10, TEST_COMMITMENT, {
         value: MIN_AMOUNT
       });
-      
+
       expect(await lineFutures.positionCounter()).to.equal(3);
     });
   });
@@ -414,7 +414,7 @@ describe("LineFutures", function () {
       const balanceBefore = await hre.ethers.provider.getBalance(user1.address);
 
       const tx = await lineFutures.connect(pnlServer).closePosition(0, pnl, ACTUAL_COMMITMENT);
-      
+
       await expect(tx)
         .to.emit(lineFutures, "PositionClosed")
         .withArgs(0, user1.address, pnl, expectedFinal, ACTUAL_COMMITMENT, await time.latest());
@@ -511,7 +511,7 @@ describe("LineFutures", function () {
     describe("setPnLServer", function () {
       it("Should update PnL server", async function () {
         const newServer = user1.address;
-        
+
         await expect(lineFutures.connect(owner).setPnLServer(newServer))
           .to.emit(lineFutures, "PnLServerUpdated")
           .withArgs(pnlServer.address, newServer);
@@ -535,7 +535,7 @@ describe("LineFutures", function () {
     describe("setFeePercentage", function () {
       it("Should update fee percentage", async function () {
         const newFee = 300; // 3%
-        
+
         await expect(lineFutures.connect(owner).setFeePercentage(newFee))
           .to.emit(lineFutures, "FeePercentageUpdated")
           .withArgs(200, newFee);
@@ -561,7 +561,7 @@ describe("LineFutures", function () {
         // Create a position with profit to generate fees
         await lineFutures.connect(user1).openPosition(10, TEST_COMMITMENT, { value: MIN_AMOUNT });
         await time.increase(60);
-        
+
         const pnl = hre.ethers.parseEther("5");
         await lineFutures.connect(pnlServer).closePosition(0, pnl, ACTUAL_COMMITMENT);
       });
@@ -585,7 +585,7 @@ describe("LineFutures", function () {
 
       it("Should reject withdrawing more than collected", async function () {
         const fees = await lineFutures.collectedFees();
-        
+
         await expect(
           lineFutures.connect(owner).withdrawFees(fees + 1n)
         ).to.be.revertedWith("LineFutures: insufficient fees");
@@ -593,7 +593,7 @@ describe("LineFutures", function () {
 
       it("Should reject from non-owner", async function () {
         const fees = await lineFutures.collectedFees();
-        
+
         await expect(
           lineFutures.connect(user1).withdrawFees(fees)
         ).to.be.revertedWith("LineFutures: caller is not the owner");
@@ -610,7 +610,7 @@ describe("LineFutures", function () {
 
       it("Should unpause contract", async function () {
         await lineFutures.connect(owner).pause();
-        
+
         await expect(lineFutures.connect(owner).unpause())
           .to.emit(lineFutures, "ContractUnpaused");
 
@@ -639,7 +639,7 @@ describe("LineFutures", function () {
       it("Should withdraw all contract balance", async function () {
         // Add some balance
         await lineFutures.connect(user1).openPosition(10, TEST_COMMITMENT, { value: MIN_AMOUNT });
-        
+
         const contractBalance = await hre.ethers.provider.getBalance(await lineFutures.getAddress());
         const balanceBefore = await hre.ethers.provider.getBalance(owner.address);
 
@@ -689,7 +689,7 @@ describe("LineFutures", function () {
     describe("getUserStats", function () {
       it("Should return correct stats for user with open positions", async function () {
         const [total, open, closed, totalPnl] = await lineFutures.getUserStats(user1.address);
-        
+
         expect(total).to.equal(2);
         expect(open).to.equal(2);
         expect(closed).to.equal(0);
@@ -698,15 +698,15 @@ describe("LineFutures", function () {
 
       it("Should return correct stats after closing positions", async function () {
         await time.increase(60);
-        
+
         const pnl1 = hre.ethers.parseEther("5");
         const pnl2 = hre.ethers.parseEther("-2");
-        
+
         await lineFutures.connect(pnlServer).closePosition(0, pnl1, ACTUAL_COMMITMENT);
         await lineFutures.connect(pnlServer).closePosition(1, pnl2, ACTUAL_COMMITMENT);
 
         const [total, open, closed, totalPnl] = await lineFutures.getUserStats(user1.address);
-        
+
         expect(total).to.equal(2);
         expect(open).to.equal(0);
         expect(closed).to.equal(2);
@@ -715,7 +715,7 @@ describe("LineFutures", function () {
 
       it("Should return zeros for user with no positions", async function () {
         const [total, open, closed, totalPnl] = await lineFutures.getUserStats(user2.address);
-        
+
         expect(total).to.equal(0);
         expect(open).to.equal(0);
         expect(closed).to.equal(0);

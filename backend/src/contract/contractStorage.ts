@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import logger from '../utils/logger.js';
 import config from '../config/config.js';
+import { getEthereumProvider } from '../ethereumProvider.js';
 
 // PriceOracle contract ABI (only the functions we need)
 const ORACLE_ABI = [
@@ -22,23 +23,22 @@ interface QueuedTransaction {
 }
 
 export class ContractStorage {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.Provider;
   private wallet: ethers.Wallet;
   private contract: ethers.Contract;
   private txQueue: QueuedTransaction[] = [];
   private isProcessingQueue = false;
 
   constructor(
-    rpcUrl: string = config.ethereumRpcUrl,
+    _rpcUrl?: string,
     privateKey: string = config.ethereumPrivateKey,
     contractAddress: string = config.contractAddress
   ) {
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.provider = getEthereumProvider();
     this.wallet = new ethers.Wallet(privateKey, this.provider);
     this.contract = new ethers.Contract(contractAddress, ORACLE_ABI, this.wallet);
 
     logger.info('ContractStorage initialized', {
-      rpcUrl,
       contractAddress,
       walletAddress: this.wallet.address
     });

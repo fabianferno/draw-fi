@@ -66,7 +66,7 @@ export function BottomControls({
                   <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 rounded-lg border-2 sm:border-3 border-[#00E5FF] bg-[#000000]/50 shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]">
                     <WalletIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#00E5FF] shrink-0" aria-hidden />
                     <span className="font-mono text-xs sm:text-sm md:text-base text-gray-200 tracking-tight truncate">
-                      {isConnected ? `${yellowDepositBalance} ytest` : '0.00'}
+                      {isConnected ? `${(Number(yellowDepositBalance) / 1e6).toFixed(2)} ytest` : '0.00'}
                     </span>
                   </div>
                 </motion.div>

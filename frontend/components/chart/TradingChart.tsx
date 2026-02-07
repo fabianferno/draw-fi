@@ -62,7 +62,7 @@ export function TradingChart({
 
   // PNL configuration - can be made user-configurable later
   const [pnlConfig] = useState<PNLConfig>({
-    amount: 10,        // 10 ETH default (MIN_AMOUNT)
+    amount: 0.01,      // 0.01 ETH default (above MIN_AMOUNT 0.001)
     leverage: 10,      // 10x default leverage
     feePercentage: 200 // 2% fee (matches backend)
   });

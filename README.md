@@ -102,6 +102,7 @@ YELLOW_CLEARNODE_WS_URL=wss://clearnet-sandbox.yellow.com/ws
 YELLOW_RELAYER_PRIVATE_KEY= # or uses ETHEREUM_SEPOLIA_PRIVATE_KEY
 YELLOW_RELAYER_ENABLED=true # required for Yellow/Relayer positions
 YELLOW_ETH_TO_ytest_RATE=100 # 1 ETH = 100 ytest.usd
+YELLOW_FAUCET_ALSO_CREDIT=true # Faucet also credits Draw-Fi balance (sandbox - no transfer needed)
 ```
 
 **Frontend** (`.env.local`):

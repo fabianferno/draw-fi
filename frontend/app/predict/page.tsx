@@ -61,7 +61,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const [barSpacing, setBarSpacing] = useState(3);
   const [selectedMinute, setSelectedMinute] = useState<number | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
-  const [amount, setAmount] = useState<number>(10);
+  const [amount, setAmount] = useState<number>(0.01);
   const [leverage, setLeverage] = useState<number>(2500);
   const [positionIds, setPositionIds] = useState<number[]>([]);
   const [positionStatus, setPositionStatus] = useState<'idle' | 'trading' | 'awaiting_settlement' | 'closed'>('idle');
@@ -73,6 +73,13 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const { request: requestFaucet, loading: faucetLoading, result: faucetResult } = useYellowFaucet(address ?? null);
   const { depositAddress, depositBalance, loading: yellowDepositLoading, refresh: refreshYellowDeposit } =
     useYellowDeposit(address ?? null);
+
+  // Refresh deposit balance when faucet succeeds (e.g. when YELLOW_FAUCET_ALSO_CREDIT credits us)
+  useEffect(() => {
+    if (faucetResult?.success) {
+      refreshYellowDeposit();
+    }
+  }, [faucetResult?.success, refreshYellowDeposit]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -237,8 +244,10 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       return;
     }
     const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt < 0.01) {
-      alert('Amount must be at least 0.01 (ETH equivalent)');
+    // LineFutures contract requires minimum 0.001 ETH per position
+    const MIN_ETH = 0.001;
+    if (!Number.isFinite(amt) || amt < MIN_ETH) {
+      alert(`Amount must be at least ${MIN_ETH} ETH to open a position (contract minimum).`);
       return;
     }
 
@@ -277,7 +286,20 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         openedIds.push(result.positionId);
       } catch (err) {
         console.error('Yellow position failed', err);
-        alert(`Error: ${err instanceof Error ? err.message : 'Failed to open position'}`);
+        const message = err instanceof Error ? err.message : 'Failed to open position';
+        const isFundingUnavailable =
+          message.includes('not available') ||
+          message.includes('not enabled') ||
+          message.includes('disabled') ||
+          message.includes('relayer');
+        const isAmountBelowMin =
+          message.includes('amount below minimum') || message.includes('below contract minimum');
+        const friendlyMessage = isFundingUnavailable
+          ? "Pay with Yellow balance isn't enabled on this server. Try opening with wallet ETH instead, or ask the operator to enable the Yellow relayer."
+          : isAmountBelowMin
+            ? 'Position amount is below the contract minimum of 0.001 ETH. Please use at least 0.001 ETH per position.'
+            : message;
+        alert(`Error: ${friendlyMessage}`);
         if (openedIds.length === 0) return;
         break;
       }
@@ -361,7 +383,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
             {isConnected && (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-white/60">
-                  Balance: {yellowDepositLoading ? '...' : depositBalance} ytest.usd
+                  Balance: {yellowDepositLoading ? '...' : (Number(depositBalance) / 1e6).toFixed(2)} ytest.usd
                 </span>
                 <button
                   type="button"

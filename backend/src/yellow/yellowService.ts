@@ -48,7 +48,7 @@ export class YellowService {
     }
   }
 
-  /** Request test tokens from Yellow Sandbox faucet */
+  /** Request test tokens from Yellow Sandbox faucet. When yellowFaucetAlsoCredit is true, also credits Draw-Fi balance (sandbox convenience). */
   async requestFaucetTokens(userAddress: string): Promise<{ success: boolean; message?: string }> {
     try {
       const res = await fetch(YELLOW_FAUCET_URL, {
@@ -59,6 +59,18 @@ export class YellowService {
       const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
       if (!res.ok) {
         return { success: false, message: data.error || `Faucet returned ${res.status}` };
+      }
+      if (config.yellowFaucetAlsoCredit && this.yellowBalanceDb) {
+        const FAUCET_CREDIT_AMOUNT = '1000000000'; // 1000 ytest.usd (6 decimals)
+        const credited = this.yellowBalanceDb.credit(
+          userAddress,
+          FAUCET_CREDIT_AMOUNT,
+          YTEST_USD,
+          -Date.now()
+        );
+        if (credited) {
+          logger.info('Faucet also credited Draw-Fi balance', { userAddress, amount: FAUCET_CREDIT_AMOUNT });
+        }
       }
       return { success: data.success !== false, message: data.error };
     } catch (e) {
@@ -88,27 +100,47 @@ export class YellowService {
   }
 
   /**
+   * Check if opening positions with Yellow balance is available.
+   * Use this to return a clear 503 reason to the client.
+   */
+  getFundingAvailability(): { available: boolean; reason?: string } {
+    if (!this.yellowBalanceDb) {
+      return { available: false, reason: 'Yellow balance database not initialized' };
+    }
+    if (!config.yellowRelayerEnabled) {
+      return { available: false, reason: 'Pay with Yellow balance is disabled on this server (relayer not enabled)' };
+    }
+    if (!this.relayerService) {
+      return { available: false, reason: 'Yellow relayer failed to start (check YELLOW_RELAYER_PRIVATE_KEY)' };
+    }
+    return { available: true };
+  }
+
+  /**
    * Open position using Yellow balance (off-chain fund -> on-chain settle).
    * User signs EIP-712; we verify Yellow balance, relayer submits to LineFutures, then we deduct.
    */
   async openPositionWithYellow(params: FundPositionParams): Promise<{ positionId: number; txHash: string }> {
-    if (!this.relayerService || !this.yellowBalanceDb) {
-      throw new Error('Yellow position funding not available');
+    const availability = this.getFundingAvailability();
+    if (!availability.available) {
+      throw new Error(availability.reason ?? 'Yellow position funding not available');
     }
     const amountYtest = ethWeiToYtest(params.amountWei);
-    const balance = this.yellowBalanceDb.getBalance(params.userAddress);
+    const db = this.yellowBalanceDb!;
+    const relayer = this.relayerService!;
+    const balance = db.getBalance(params.userAddress);
     if (BigInt(balance) < BigInt(amountYtest)) {
       throw new Error('Insufficient Yellow balance');
     }
-    const result = await this.relayerService.fundPosition(params);
-    const debited = this.yellowBalanceDb.debit(params.userAddress, amountYtest);
+    const result = await relayer.fundPosition(params);
+    const debited = db.debit(params.userAddress, amountYtest);
     if (!debited) {
       logger.error('Yellow debit failed after position opened - potential double-spend', {
         positionId: result.positionId,
         user: params.userAddress,
       });
     }
-    this.yellowBalanceDb.recordYellowFundedPosition(
+    db.recordYellowFundedPosition(
       result.positionId,
       params.userAddress,
       amountYtest

@@ -903,6 +903,11 @@ export class APIServer {
         res.status(503).json({ error: 'Yellow service not available' });
         return;
       }
+      const availability = this.yellowService.getFundingAvailability();
+      if (!availability.available) {
+        res.status(503).json({ error: availability.reason ?? 'Yellow position funding not available' });
+        return;
+      }
       const { userAddress, amountWei, leverage, commitmentId, signature, nonce, deadline } = req.body;
       if (!userAddress || !amountWei || !commitmentId || !signature) {
         res.status(400).json({
@@ -922,7 +927,13 @@ export class APIServer {
       res.json(result);
     } catch (error: any) {
       logger.error('Open with Yellow balance failed', error);
-      res.status(400).json({ error: error.message || 'Open with Yellow balance failed' });
+      const msg = error.message || 'Open with Yellow balance failed';
+      const isUnavailable =
+        msg.includes('not available') ||
+        msg.includes('not enabled') ||
+        msg.includes('disabled') ||
+        msg.includes('relayer');
+      res.status(isUnavailable ? 503 : 400).json({ error: msg });
     }
   };
 

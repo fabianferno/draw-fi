@@ -407,48 +407,69 @@ export function PatternDrawingBox({
           </div>
         </div>
 
+        {/* Leverage - horizontal button row */}
+        <div className="mb-4 w-full">
+          <p className="text-[13px] text-[#00E5FF]/70 mb-2 font-light">
+            Choose your leverage
+          </p>
+          <div className="flex w-full flex-wrap gap-2">
+            {[100, 200, 500, 1000, 1500, 2000, 2500].map((lev) => (
+              <motion.button
+                key={lev}
+                type="button"
+                onClick={() => onLeverageChange(lev)}
+                className={`
+                  flex-1 min-w-0 py-2.5 rounded-xl text-xs font-bold border-3
+                  transition-all duration-200
+                  ${leverage === lev
+                    ? 'bg-[#00E5FF] text-[#000000] border-[#00E5FF] shadow-[3px_3px_0_0_#000000]'
+                    : 'bg-[#000000] text-[#00E5FF] border-[#00E5FF] hover:bg-[#000000]/80 shadow-[3px_3px_0_0_#00E5FF]'
+                  }
+                `}
+                title={`${lev}x leverage`}
+                whileHover={{ x: -1, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {lev}x
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
         {/* Action Buttons - Nyan style */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col  items-center gap-3">
+          <div className="flex flex-col w-full gap-2">
+            <p className="text-[13px] text-[#00E5FF]/70 font-light">
+              Choose your amount
+            </p>
             <motion.input
               type="number"
-              min={0}
+              min={0.001}
+              step={0.01}
               value={amount}
               onChange={(e) => onAmountChange(Number(e.target.value) || 0)}
-              className="w-15 px-3 py-2 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-xs font-bold shadow-[3px_3px_0_0_#00E5FF] focus:outline-none focus:bg-[#000000]/90"
+              className="w-full px-3 py-5 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-3xl font-bold shadow-[3px_3px_0_0_#00E5FF] focus:outline-none focus:bg-[#000000]/90"
               whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
               whileFocus={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
             />
-            <motion.select
-              value={leverage}
-              onChange={(e) => onLeverageChange(Number(e.target.value))}
-              className="px-2 py-2 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-xs font-bold shadow-[3px_3px_0_0_#00E5FF] focus:outline-none focus:bg-[#000000]/90 [&>option]:bg-[#000000] [&>option]:text-[#00E5FF]"
-              whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-              whileFocus={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-            >
-              {[100, 200, 500, 1000, 1500, 2000, 2500].map((lev) => (
-                <option key={lev} value={lev}>
-                  {lev}x
-                </option>
-              ))}
-            </motion.select>
           </div>
-          <SlotMachineLeverButton
-            text="DRAWFI"
-            onClick={handleApply}
-            disabled={points.length < 2}
-            className="flex-1"
-          />
-
-          <motion.button
-            onClick={handleClear}
-            disabled={points.length === 0}
-            className="px-2 py-2 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-xs font-bold shadow-[3px_3px_0_0_#00E5FF] disabled:opacity-30 disabled:cursor-not-allowed"
-            whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-            whileTap={{ x: 2, y: 2, boxShadow: '1px 1px 0 0 #00E5FF' }}
-          >
-            ✕
-          </motion.button>
+          <div className="flex w-full gap-2">
+            <SlotMachineLeverButton
+              text="DRAWFI"
+              onClick={handleApply}
+              disabled={points.length < 2}
+              className="flex-1"
+            />
+            <motion.button
+              onClick={handleClear}
+              disabled={points.length === 0}
+              className="px-2 py-2 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-xs font-bold shadow-[3px_3px_0_0_#00E5FF] disabled:opacity-30 disabled:cursor-not-allowed"
+              whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
+              whileTap={{ x: 2, y: 2, boxShadow: '1px 1px 0 0 #00E5FF' }}
+            >
+              ✕
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>

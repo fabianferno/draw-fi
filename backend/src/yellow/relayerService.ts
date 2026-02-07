@@ -6,6 +6,7 @@
  */
 import { ethers } from 'ethers';
 import config from '../config/config.js';
+import { getEthereumProvider } from '../ethereumProvider.js';
 import logger from '../utils/logger.js';
 
 const LINEFUTURES_ABI = [
@@ -29,6 +30,9 @@ export const FUND_POSITION_TYPES = {
     { name: 'deadline', type: 'uint256' },
   ],
 };
+
+/** LineFutures contract minimum position size (0.001 ETH) */
+const MIN_POSITION_AMOUNT_WEI = 10n ** 15n;
 
 const nonces: Map<string, number> = new Map();
 const positionToUser: Map<number, string> = new Map();
@@ -55,14 +59,14 @@ export function getPositionUser(positionId: number): string | undefined {
 }
 
 export class RelayerService {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.Provider;
   private wallet: ethers.Wallet;
   private contract: ethers.Contract;
 
   constructor() {
     const key = config.yellowPrivateKey || config.ethereumPrivateKey;
     if (!key) throw new Error('YELLOW_RELAYER_PRIVATE_KEY or ETHEREUM_SEPOLIA_PRIVATE_KEY required');
-    this.provider = new ethers.JsonRpcProvider(config.ethereumRpcUrl);
+    this.provider = getEthereumProvider();
     this.wallet = new ethers.Wallet(key, this.provider);
     this.contract = new ethers.Contract(config.futuresContractAddress, LINEFUTURES_ABI, this.wallet);
   }
@@ -100,9 +104,22 @@ export class RelayerService {
       throw new Error('Invalid signature');
     }
 
+    if (amountWei < MIN_POSITION_AMOUNT_WEI) {
+      throw new Error(
+        `Position amount below contract minimum. Required at least ${ethers.formatEther(MIN_POSITION_AMOUNT_WEI)} ETH, got ${ethers.formatEther(amountWei)} ETH.`
+      );
+    }
+
     const balance = await this.provider.getBalance(this.wallet.address);
     if (balance < amountWei) {
-      throw new Error('Relayer has insufficient ETH balance');
+      const addr = this.wallet.address;
+      throw new Error(
+        `Relayer has insufficient ETH balance. ` +
+        `Address: ${addr}. ` +
+        `Required: ${ethers.formatEther(amountWei)} ETH (position size). ` +
+        `Current: ${ethers.formatEther(balance)} ETH. ` +
+        `Send Sepolia ETH to ${addr} (use a Sepolia faucet if on testnet).`
+      );
     }
 
     const tx = await this.contract.openPosition(leverage, commitmentId, { value: amountWei });

@@ -28,7 +28,7 @@ contract LineFutures {
     address public pnlServer;
 
     // Constants
-    uint256 public constant MIN_AMOUNT = 10 * 10**18;     // 10 ETH minimum
+    uint256 public constant MIN_AMOUNT = 10**15;          // 0.001 ETH minimum
     uint16 public constant MAX_LEVERAGE = 2500;
     uint256 public constant POSITION_DURATION = 60;       // seconds
 

@@ -5,6 +5,8 @@ dotenv.config({ path: ".env.local" });
 export interface Config {
   network: 'mainnet' | 'testnet' | 'local';
   ethereumRpcUrl: string;
+  /** Optional fallback RPC URLs when primary returns 522/timeouts */
+  ethereumRpcFallbackUrls: string[];
   ethereumPrivateKey: string;
   contractAddress: string;
   futuresContractAddress: string;
@@ -24,6 +26,8 @@ export interface Config {
   yellowPrivateKey: string | null;
   yellowRelayerEnabled: boolean;
   yellowEthToYtestRate: number;
+  /** When true, faucet success also credits user's Draw-Fi balance (sandbox convenience - no separate transfer needed) */
+  yellowFaucetAlsoCredit: boolean;
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -41,6 +45,10 @@ function getOptionalEnvVar(key: string, defaultValue: string): string {
 export const config: Config = {
   network: (process.env.NETWORK || 'local') as 'mainnet' | 'testnet' | 'local',
   ethereumRpcUrl: getOptionalEnvVar('ETHEREUM_RPC_URL', 'https://rpc.sepolia.org'),
+  ethereumRpcFallbackUrls: (process.env.ETHEREUM_RPC_FALLBACK_URLS || '')
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean),
   ethereumPrivateKey: getEnvVar('ETHEREUM_SEPOLIA_PRIVATE_KEY'),
   contractAddress: getEnvVar('CONTRACT_ADDRESS'),
   futuresContractAddress: getEnvVar('FUTURES_CONTRACT_ADDRESS'),
@@ -63,6 +71,7 @@ export const config: Config = {
     const v = parseFloat(process.env.YELLOW_ETH_TO_ytest_RATE || '100');
     return Number.isFinite(v) && v > 0 ? v : 100;
   })(),
+  yellowFaucetAlsoCredit: process.env.YELLOW_FAUCET_ALSO_CREDIT === 'true',
 };
 
 export default config;
