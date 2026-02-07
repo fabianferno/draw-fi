@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@privy-io/react-auth": "^1.82.0",
     "@react-three/fiber": "^9.5.0",
     "@shadergradient/react": "^2.4.20",
