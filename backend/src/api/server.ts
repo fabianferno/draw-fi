@@ -137,13 +137,6 @@ export class APIServer {
       this.app.get('/api/yellow/balance/:address', this.handleYellowBalance.bind(this));
       this.app.post('/api/yellow/faucet', this.handleYellowFaucet.bind(this));
       this.app.get('/api/yellow/config', this.handleYellowConfig.bind(this));
-      this.app.get('/api/yellow/demo/balance/:address', this.handleDemoBalance.bind(this));
-      this.app.post('/api/yellow/demo/add', this.handleDemoAddBalance.bind(this));
-      this.app.post('/api/yellow/demo/position', this.handleDemoOpenPosition.bind(this));
-      this.app.post('/api/yellow/demo/position/:id/close', this.handleDemoClosePosition.bind(this));
-      this.app.get('/api/yellow/demo/positions/:address', this.handleDemoPositions.bind(this));
-      this.app.post('/api/yellow/fund-position', this.handleFundPosition.bind(this));
-      this.app.get('/api/yellow/relayer/balance', this.handleRelayerBalance.bind(this));
       this.app.get('/api/yellow/deposit-address', this.handleYellowDepositAddress.bind(this));
       this.app.get('/api/yellow/deposit-balance/:address', this.handleYellowDepositBalance.bind(this));
       this.app.post('/api/yellow/open-with-balance', this.handleOpenWithYellowBalance.bind(this));
@@ -863,164 +856,6 @@ export class APIServer {
   };
 
   /**
-   * Handle demo balance request
-   */
-  private handleDemoBalance = (req: Request, res: Response): void => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const address = Array.isArray(req.params.address) ? req.params.address[0] : req.params.address;
-      if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-        res.status(400).json({ error: 'Invalid address' });
-        return;
-      }
-      const balance = this.yellowService.getDemoBalance(address);
-      res.json({ balance });
-    } catch (error) {
-      logger.error('Demo balance failed', error);
-      res.status(500).json({ error: 'Failed to get demo balance' });
-    }
-  };
-
-  /**
-   * Handle demo add balance
-   */
-  private handleDemoAddBalance = (req: Request, res: Response): void => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const { address, amount } = req.body;
-      if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-        res.status(400).json({ error: 'Invalid address' });
-        return;
-      }
-      const addAmount = typeof amount === 'number' ? amount : parseInt(String(amount || 1000), 10);
-      const newBalance = this.yellowService.addDemoBalance(address, addAmount);
-      res.json({ success: true, balance: newBalance });
-    } catch (error) {
-      logger.error('Demo add balance failed', error);
-      res.status(500).json({ error: 'Failed to add demo balance' });
-    }
-  };
-
-  /**
-   * Handle demo open position
-   */
-  private handleDemoOpenPosition = (req: Request, res: Response): void => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const { userAddress, amount, leverage, predictionCommitmentId } = req.body;
-      if (!userAddress || !predictionCommitmentId) {
-        res.status(400).json({ error: 'Missing userAddress or predictionCommitmentId' });
-        return;
-      }
-      const amt = typeof amount === 'number' ? amount : parseFloat(String(amount || 10));
-      const lev = typeof leverage === 'number' ? leverage : parseInt(String(leverage || 100), 10);
-      const openTimestamp = Math.floor(Date.now() / 1000);
-      const position = this.yellowService.openDemoPosition(
-        userAddress,
-        amt,
-        lev,
-        predictionCommitmentId,
-        openTimestamp
-      );
-      if (!position) {
-        res.status(400).json({ error: 'Insufficient demo balance' });
-        return;
-      }
-      res.json({ success: true, position });
-    } catch (error) {
-      logger.error('Demo open position failed', error);
-      res.status(500).json({ error: 'Failed to open demo position' });
-    }
-  };
-
-  /**
-   * Handle demo close position
-   */
-  private handleDemoClosePosition = async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const positionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      if (!positionId) {
-        res.status(400).json({ error: 'Missing position ID' });
-        return;
-      }
-      const position = await this.yellowService.closeDemoPositionByCommitment(positionId);
-      if (!position) {
-        res.status(400).json({ error: 'Position not found or not yet closable' });
-        return;
-      }
-      res.json({ success: true, position });
-    } catch (error) {
-      logger.error('Demo close position failed', error);
-      res.status(500).json({ error: 'Failed to close demo position' });
-    }
-  };
-
-  /**
-   * Handle demo positions list
-   */
-  private handleDemoPositions = (req: Request, res: Response): void => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const address = Array.isArray(req.params.address) ? req.params.address[0] : req.params.address;
-      if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-        res.status(400).json({ error: 'Invalid address' });
-        return;
-      }
-      const positions = this.yellowService.getDemoPositions(address);
-      res.json({ positions });
-    } catch (error) {
-      logger.error('Demo positions failed', error);
-      res.status(500).json({ error: 'Failed to get demo positions' });
-    }
-  };
-
-  /**
-   * Handle fund position (Phase 2 relayer)
-   */
-  private handleFundPosition = async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const { userAddress, amountWei, leverage, commitmentId, signature, nonce, deadline } = req.body;
-      if (!userAddress || !amountWei || !commitmentId || !signature) {
-        res.status(400).json({ error: 'Missing required fields: userAddress, amountWei, commitmentId, signature' });
-        return;
-      }
-      const result = await this.yellowService.fundPosition({
-        userAddress,
-        amountWei: BigInt(amountWei),
-        leverage: Number(leverage) || 100,
-        commitmentId,
-        signature,
-        nonce,
-        deadline,
-      });
-      res.json(result);
-    } catch (error: any) {
-      logger.error('Fund position failed', error);
-      res.status(400).json({ error: error.message || 'Fund position failed' });
-    }
-  };
-
-  /**
    * Handle Yellow deposit address (where users send funds)
    */
   private handleYellowDepositAddress = (_req: Request, res: Response): void => {
@@ -1088,23 +923,6 @@ export class APIServer {
     } catch (error: any) {
       logger.error('Open with Yellow balance failed', error);
       res.status(400).json({ error: error.message || 'Open with Yellow balance failed' });
-    }
-  };
-
-  /**
-   * Handle relayer balance
-   */
-  private handleRelayerBalance = async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const balance = await this.yellowService.getRelayerBalance();
-      res.json({ balance: balance.toString() });
-    } catch (error) {
-      logger.error('Relayer balance failed', error);
-      res.status(500).json({ error: 'Failed to get relayer balance' });
     }
   };
 

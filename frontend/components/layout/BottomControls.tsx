@@ -9,13 +9,8 @@ interface BottomControlsProps {
   selectedMinute: number | null;
   hasPoints: boolean;
   onClear: () => void;
-  mntBalance?: bigint | null;
-  isBalanceLoading?: boolean;
   isConnected?: boolean;
   batchPnL?: number | null;
-  isDemoMode?: boolean;
-  demoBalance?: number;
-  isYellowMode?: boolean;
   yellowDepositBalance?: string;
 }
 
@@ -25,13 +20,8 @@ export function BottomControls({
   selectedMinute,
   hasPoints,
   onClear,
-  mntBalance,
-  isBalanceLoading = false,
   isConnected = false,
   batchPnL = null,
-  isDemoMode = false,
-  demoBalance = 0,
-  isYellowMode = false,
   yellowDepositBalance = '0',
 }: BottomControlsProps) {
   return (
@@ -76,13 +66,7 @@ export function BottomControls({
                   <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 rounded-lg border-2 sm:border-3 border-[#00E5FF] bg-[#000000]/50 shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]">
                     <WalletIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#00E5FF] shrink-0" aria-hidden />
                     <span className="font-mono text-xs sm:text-sm md:text-base text-gray-200 tracking-tight truncate">
-                      {isDemoMode
-                        ? `${demoBalance} demo`
-                        : isYellowMode
-                          ? `${yellowDepositBalance} ytest`
-                          : isConnected && mntBalance !== null
-                            ? `${Number((mntBalance ?? 0n) / 10_000_000_000_000_000n) / 100}`
-                            : '0.00'}
+                      {isConnected ? `${yellowDepositBalance} ytest` : '0.00'}
                     </span>
                   </div>
                 </motion.div>

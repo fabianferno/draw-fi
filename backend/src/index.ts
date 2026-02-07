@@ -92,12 +92,7 @@ class MNTPriceOracleApp {
 
       this.yellowBalanceDb = new YellowBalanceDatabase();
       this.yellowBalanceDb.initialize();
-      this.yellowService = new YellowService(
-        this.predictionService,
-        this.pnlCalculator,
-        this.retrievalService,
-        this.yellowBalanceDb
-      );
+      this.yellowService = new YellowService(this.yellowBalanceDb);
 
       this.positionService = new PositionService(
         this.futuresContractStorage,

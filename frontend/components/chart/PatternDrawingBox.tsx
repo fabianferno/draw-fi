@@ -434,7 +434,7 @@ export function PatternDrawingBox({
             </motion.select>
           </div>
           <SlotMachineLeverButton
-            text="DRAW-FI"
+            text="DRAWFI"
             onClick={handleApply}
             disabled={points.length < 2}
             className="flex-1"

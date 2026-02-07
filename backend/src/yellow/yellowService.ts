@@ -1,6 +1,5 @@
 /**
- * Yellow integration service - coordinates faucet, balance, demo, relayer,
- * and real Yellow flow: deposit -> off-chain balance -> position -> settle on-chain -> payout via Yellow
+ * Yellow integration service - deposit -> off-chain balance -> position -> settle on-chain -> payout via Yellow
  */
 import type { Address } from 'viem';
 import {
@@ -12,18 +11,6 @@ import {
 import { RelayerService, type FundPositionParams } from './relayerService.js';
 import type { YellowBalanceDatabase } from './yellowBalanceDatabase.js';
 import config from '../config/config.js';
-import {
-  getDemoBalance,
-  addDemoBalance,
-  openDemoPosition,
-  closeDemoPositionWithData,
-  getDemoPositions,
-  getOpenDemoPosition,
-  type DemoPosition,
-} from './demoPositions.js';
-import type { PredictionService } from '../futures/predictionService.js';
-import type { PNLCalculator } from '../pnl/pnlCalculator.js';
-import type { RetrievalService } from '../retrieval/retrievalService.js';
 import logger from '../utils/logger.js';
 
 const YELLOW_FAUCET_URL = 'https://clearnet-sandbox.yellow.com/faucet/requestTokens';
@@ -50,12 +37,7 @@ export class YellowService {
   private relayerService?: RelayerService;
   private yellowBalanceDb?: YellowBalanceDatabase;
 
-  constructor(
-    private predictionService?: PredictionService,
-    private pnlCalculator?: PNLCalculator,
-    private retrievalService?: RetrievalService,
-    yellowBalanceDb?: YellowBalanceDatabase
-  ) {
+  constructor(yellowBalanceDb?: YellowBalanceDatabase) {
     this.yellowBalanceDb = yellowBalanceDb;
     if (config.yellowRelayerEnabled) {
       try {
@@ -159,74 +141,4 @@ export class YellowService {
     return ok;
   }
 
-  // --- Demo mode ---
-
-  getDemoBalance(address: string): number {
-    return getDemoBalance(address);
-  }
-
-  addDemoBalance(address: string, amount: number): number {
-    return addDemoBalance(address, amount);
-  }
-
-  openDemoPosition(
-    userAddress: string,
-    amount: number,
-    leverage: number,
-    predictionCommitmentId: string,
-    openTimestamp: number
-  ): DemoPosition | null {
-    return openDemoPosition(userAddress, amount, leverage, predictionCommitmentId, openTimestamp);
-  }
-
-  async closeDemoPosition(
-    positionId: string,
-    predictions: number[],
-    actualPrices: number[]
-  ): Promise<DemoPosition | null> {
-    if (!this.pnlCalculator) return null;
-    return closeDemoPositionWithData(positionId, predictions, actualPrices, this.pnlCalculator);
-  }
-
-  getDemoPositions(userAddress: string): DemoPosition[] {
-    return getDemoPositions(userAddress);
-  }
-
-  getOpenDemoPosition(positionId: string): DemoPosition | null {
-    return getOpenDemoPosition(positionId);
-  }
-
-  /** Phase 2: Fund position via relayer (user signs, relayer submits) */
-  async fundPosition(params: FundPositionParams): Promise<{ positionId: number; txHash: string }> {
-    if (!this.relayerService) throw new Error('Relayer not available');
-    return this.relayerService.fundPosition(params);
-  }
-
-  async getRelayerBalance(): Promise<bigint> {
-    if (!this.relayerService) return 0n;
-    return this.relayerService.getRelayerBalance();
-  }
-
-  /** Fetch predictions from EigenDA and close demo position */
-  async closeDemoPositionByCommitment(positionId: string): Promise<DemoPosition | null> {
-    const position = getOpenDemoPosition(positionId);
-    if (!position || !this.predictionService || !this.pnlCalculator || !this.retrievalService) {
-      return null;
-    }
-    const elapsed = Math.floor(Date.now() / 1000) - position.openTimestamp;
-    if (elapsed < 60) return null;
-
-    const [predictionsBlob, actualWindow] = await Promise.all([
-      this.predictionService.retrievePredictions(position.predictionCommitmentId),
-      this.retrievalService.getWindowForPosition(position.openTimestamp),
-    ]);
-    if (!predictionsBlob?.predictions || predictionsBlob.predictions.length !== 60) return null;
-    if (!actualWindow?.prices || actualWindow.prices.length !== 60) return null;
-
-    return this.closeDemoPosition(
-      positionId,
-      predictionsBlob.predictions,
-      actualWindow.prices
-    );
-  }
 }

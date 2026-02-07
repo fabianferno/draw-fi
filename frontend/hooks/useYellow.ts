@@ -4,12 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   getYellowBalance,
   requestYellowFaucet,
-  getDemoBalance,
-  addDemoBalance,
   getDepositAddress,
   getYellowDepositBalance,
   type YellowBalance,
-  type DemoPosition,
 } from '@/lib/api/yellow';
 
 export function useYellowBalance(address: string | null) {
@@ -59,43 +56,6 @@ export function useYellowFaucet(address: string | null) {
   return { request, loading, result };
 }
 
-export function useDemoBalance(address: string | null, isDemoMode: boolean) {
-  const [balance, setBalance] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!address || !isDemoMode) return;
-    setLoading(true);
-    try {
-      const b = await getDemoBalance(address);
-      setBalance(b);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [address, isDemoMode]);
-
-  const addFunds = useCallback(async (amount = 1000) => {
-    if (!address) return;
-    setLoading(true);
-    try {
-      const b = await addDemoBalance(address, amount);
-      setBalance(b);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [address]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { balance, loading, refresh, addFunds };
-}
-
 export function useYellowDeposit(address: string | null) {
   const [depositAddress, setDepositAddress] = useState<string>('');
   const [depositBalance, setDepositBalance] = useState<string>('0');
@@ -122,28 +82,4 @@ export function useYellowDeposit(address: string | null) {
   }, [refresh]);
 
   return { depositAddress, depositBalance, loading, refresh };
-}
-
-export function useDemoPositions(address: string | null, isDemoMode: boolean) {
-  const [positions, setPositions] = useState<DemoPosition[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!address || !isDemoMode) return;
-    setLoading(true);
-    try {
-      const p = await getDemoPositions(address);
-      setPositions(p);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [address, isDemoMode]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { positions, loading, refresh };
 }

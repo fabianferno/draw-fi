@@ -1,6 +1,5 @@
 export * from './yellowClient.js';
 export * from './yellowAuth.js';
-export * from './demoPositions.js';
 export * from './yellowService.js';
 export {
     EIP712_DOMAIN,

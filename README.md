@@ -30,7 +30,7 @@
 │  (Positions)    │     │ (Cron every 10s) │     │ (Directional)   │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
 
-Yellow Network (optional):
+Yellow Network:
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │  Yellow Ledger  │────▶│ Deposit Poller   │────▶│ Yellow Balances │
 │  (Incoming xfer)│     │ (every 15s)      │     │ (DB)            │
@@ -67,7 +67,7 @@ Position closes ──▶ Payout via Yellow transfer to user
 - **TradingChart** – Live price chart (Bybit) with drawing overlay
 - **PatternDrawingBox** – Canvas to draw prediction curves, time horizon (1–5 min), amount, leverage
 - **Token pair selector** – BTC/USDT, ETH/USDT, AAVE/USDT, DOGE/USDT
-- **Funding modes** – Demo (paper), Yellow (off-chain fund → on-chain settle), Relayer (gasless via relayer wallet)
+- **Yellow by default** – Deposit ytest.usd via Yellow Network, open positions, settle on-chain, receive payouts in Yellow
 
 ## PnL Formula
 
@@ -97,7 +97,7 @@ FUTURES_CONTRACT_ADDRESS=   # LineFutures address
 EIGENDA_PROXY_URL=http://127.0.0.1:3100
 ADMIN_API_KEY=
 
-# Yellow Network (optional)
+# Yellow Network (required for opening positions)
 YELLOW_CLEARNODE_WS_URL=wss://clearnet-sandbox.yellow.com/ws
 YELLOW_RELAYER_PRIVATE_KEY= # or uses ETHEREUM_SEPOLIA_PRIVATE_KEY
 YELLOW_RELAYER_ENABLED=true # required for Yellow/Relayer positions
@@ -149,25 +149,6 @@ See `contracts/DEPLOY.md` and `contracts/DEPLOYMENT.md` for details.
 | `POST /api/yellow/open-with-balance` | Open position using Yellow balance (EIP-712 signed) |
 | `POST /api/yellow/faucet` | Request test tokens from Yellow Sandbox |
 | `GET /api/yellow/balance/:address` | Yellow ledger balance |
-| `POST /api/yellow/fund-position` | Relayer: open position (user signs, relayer pays gas) |
-
-### Demo Mode
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/yellow/demo/balance/:address` | Paper trading balance |
-| `POST /api/yellow/demo/add` | Add demo funds |
-| `POST /api/yellow/demo/position` | Open demo position |
-| `POST /api/yellow/demo/position/:id/close` | Close demo position |
-
-## Funding Modes
-
-| Mode | Description |
-|------|-------------|
-| **Demo** | Paper trading with simulated balance. No gas, no real funds. |
-| **Yellow** | Deposit ytest.usd via Yellow Network → open positions → settle on-chain → payout in Yellow. Off-chain funding, on-chain settlement. |
-| **Relayer** | User signs EIP-712; relayer pays gas and opens position. Requires `YELLOW_RELAYER_ENABLED=true` and funded relayer wallet. |
-| **Direct** | User pays ETH directly to LineFutures (default). |
 
 ## License
 

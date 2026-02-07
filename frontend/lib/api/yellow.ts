@@ -24,75 +24,6 @@ export async function requestYellowFaucet(userAddress: string): Promise<{ succes
   return { success: json.success !== false, message: json.message };
 }
 
-export async function getDemoBalance(address: string): Promise<number> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/demo/balance/${address}`);
-  if (!res.ok) throw new Error('Failed to fetch demo balance');
-  const json = await res.json();
-  return json.balance ?? 0;
-}
-
-export async function addDemoBalance(address: string, amount = 1000): Promise<number> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/demo/add`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address, amount }),
-  });
-  if (!res.ok) throw new Error('Failed to add demo balance');
-  const json = await res.json();
-  return json.balance ?? 0;
-}
-
-export interface DemoPosition {
-  id: string;
-  userAddress: string;
-  amount: number;
-  leverage: number;
-  openTimestamp: number;
-  predictionCommitmentId: string;
-  isOpen: boolean;
-  pnl?: number;
-  accuracy?: number;
-  closedAt?: number;
-}
-
-export async function openDemoPosition(params: {
-  userAddress: string;
-  amount: number;
-  leverage: number;
-  predictionCommitmentId: string;
-}): Promise<DemoPosition | null> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/demo/position`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.error || 'Failed to open demo position');
-  }
-  const json = await res.json();
-  return json.position ?? null;
-}
-
-export async function closeDemoPosition(positionId: string): Promise<DemoPosition | null> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/demo/position/${positionId}/close`, {
-    method: 'POST',
-  });
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.error || 'Failed to close demo position');
-  }
-  const json = await res.json();
-  return json.position ?? null;
-}
-
-export async function getDemoPositions(address: string): Promise<DemoPosition[]> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/demo/positions/${address}`);
-  if (!res.ok) throw new Error('Failed to fetch demo positions');
-  const json = await res.json();
-  return json.positions ?? [];
-}
-
 /** Get our deposit address (users transfer Yellow tokens here) */
 export async function getDepositAddress(): Promise<string> {
   const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/deposit-address`);
@@ -127,28 +58,6 @@ export async function openPositionWithYellowBalance(params: {
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
     throw new Error(json.error || 'Open with Yellow balance failed');
-  }
-  return res.json();
-}
-
-/** Phase 2: Fund position via relayer (no gas from user) */
-export async function fundPositionViaRelayer(params: {
-  userAddress: string;
-  amountWei: string;
-  leverage: number;
-  commitmentId: string;
-  signature: string;
-  nonce?: number;
-  deadline?: number;
-}): Promise<{ positionId: number; txHash: string }> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/fund-position`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.error || 'Fund position failed');
   }
   return res.json();
 }

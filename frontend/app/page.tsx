@@ -33,7 +33,7 @@ const itemVariants = {
 
 export default function Home() {
   return (
-    <NoiseEffect opacity={0.4} className="min-h-screen flex flex-col">
+    <NoiseEffect opacity={1} className="min-h-screen flex flex-col">
       <div className="relative flex flex-col min-h-screen">
         {/* Header */}
         <div className="relative z-20">
