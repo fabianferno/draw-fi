@@ -3,7 +3,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { defineChain } from 'viem';
+import { NextStepProvider, NextStepReact } from 'nextstepjs';
 import { TokenPairProvider } from '@/contexts/TokenPairContext';
+import { onboardingSteps } from '@/lib/onboarding/predictTourSteps';
+
+const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
 
 const queryClient = new QueryClient();
 
@@ -21,7 +25,7 @@ const ethereumSepoliaChain = defineChain({
     default: {
       http: [
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ||
-          'https://rpc.sepolia.org',
+        'https://rpc.sepolia.org',
       ],
     },
   },
@@ -43,6 +47,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const markOnboardingSeen = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ONBOARDING_SEEN_KEY, 'true');
+    }
+  };
+
   return (
     <PrivyProvider
       appId={appId ?? ''}
@@ -58,7 +68,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         <TokenPairProvider>
-          {children}
+          <NextStepProvider>
+            <NextStepReact
+              steps={onboardingSteps}
+              onComplete={markOnboardingSeen}
+              onSkip={markOnboardingSeen}
+            >
+              {children}
+            </NextStepReact>
+          </NextStepProvider>
         </TokenPairProvider>
       </QueryClientProvider>
     </PrivyProvider>

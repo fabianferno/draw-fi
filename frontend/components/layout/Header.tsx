@@ -1,8 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { useNextStep } from 'nextstepjs';
+import { predictTourId } from '@/lib/onboarding/predictTourSteps';
 import { ConnectWalletButton } from './ConnectWalletButton';
 
 interface HeaderProps {
@@ -11,6 +14,10 @@ interface HeaderProps {
 }
 
 export function Header({ showStatus, statusText }: HeaderProps) {
+  const pathname = usePathname();
+  const { startNextStep } = useNextStep();
+  const isPredictPage = pathname === '/predict';
+
   return (
     <motion.header
       className="sticky top-0 z-50 backdrop-blur-xl  bg-[#00E5FF] shadow-[0_4px_0_0_#0a0a0a]"
@@ -60,6 +67,18 @@ export function Header({ showStatus, statusText }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {isPredictPage && (
+              <motion.button
+                type="button"
+                onClick={() => startNextStep(predictTourId)}
+                className="p-2 rounded-lg border-2 border-black text-black/80 hover:text-black hover:bg-black/10 transition-colors"
+                aria-label="Show onboarding tour"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <QuestionMarkCircleIcon className="w-6 h-6" />
+              </motion.button>
+            )}
             <ConnectWalletButton />
 
             {/* Status badge */}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNextStep } from 'nextstepjs';
 import { TradingChart } from '@/components/chart/TradingChart';
 import { PatternDrawingBox } from '@/components/chart/PatternDrawingBox';
 import { usePredictionDrawing } from '@/hooks/usePredictionDrawing';
@@ -19,6 +20,9 @@ import { usePrivyWallet } from '@/hooks/usePrivyWallet';
 import { useYellowFaucet, useYellowDeposit } from '@/hooks/useYellow';
 import { openPositionWithYellowBalance } from '@/lib/api/yellow';
 import { signFundPosition } from '@/lib/yellow/relayer';
+import { predictTourId } from '@/lib/onboarding/predictTourSteps';
+
+const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +43,16 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const { ready, authenticated, address, isWalletLoading, getSigner } = usePrivyWallet();
   const isConnected = ready && authenticated && !!address && !isWalletLoading;
   const { selectedPair } = useTokenPair();
+  const { startNextStep, isNextStepVisible } = useNextStep();
+
+  // Show onboarding tour the first time user visits the predict page
+  useEffect(() => {
+    if (typeof window === 'undefined' || isNextStepVisible) return;
+    const seen = window.localStorage.getItem(ONBOARDING_SEEN_KEY);
+    if (!seen) {
+      startNextStep(predictTourId);
+    }
+  }, [startNextStep, isNextStepVisible]);
 
   const {
     isDrawing,
@@ -367,6 +381,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       >
         {/* Token Pair Selector + Yellow Balance */}
         <motion.section
+          id="onboard-token-pair"
           className="mb-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -423,6 +438,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         {/* Main Chart Card - Nyan style */}
         <NoiseEffect opacity={0.7} className="">
           <motion.div
+            id="onboard-chart"
             className="relative group"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -474,6 +490,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         {/* Pattern Drawing Box */}
         <NoiseEffect opacity={0.5} className="">
           <motion.div
+            id="onboard-draw-box"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
