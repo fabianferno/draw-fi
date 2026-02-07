@@ -10,28 +10,31 @@ interface SlotMachineLeverButtonProps {
   onClick: () => void;
   disabled?: boolean;
   className?: string;
+  /** CSS color for the lever ball (e.g. #dc2626 or theme color) */
+  leverColor?: string;
 }
 
-export function SlotMachineLeverButton({ 
-  text, 
-  onClick, 
+export function SlotMachineLeverButton({
+  text,
+  onClick,
   disabled = false,
-  className = '' 
+  className = '',
+  leverColor,
 }: SlotMachineLeverButtonProps) {
   const [isPulled, setIsPulled] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
 
   const handlePull = useCallback(() => {
     if (disabled || isPulled) return;
-    
+
     setIsPulled(true);
     setIsSpinning(true);
-    
+
     // Reset lever after pull animation
     setTimeout(() => {
       setIsPulled(false);
     }, 500);
-    
+
     // Trigger the action and stop spinning after animation
     setTimeout(() => {
       setIsSpinning(false);
@@ -40,23 +43,26 @@ export function SlotMachineLeverButton({
   }, [disabled, isPulled, onClick]);
 
   return (
-    <div className={`slot-machine-button ${className} ${disabled ? 'disabled' : ''}`}>
+    <div
+      className={`slot-machine-button ${className} ${disabled ? 'disabled' : ''}`}
+      style={leverColor ? ({ '--lever-color': leverColor } as React.CSSProperties) : undefined}
+    >
       {/* Main button body */}
       <div className="slot-body">
         <div className="slot-window">
-          <SlotMachineText 
-            text={text} 
+          <SlotMachineText
+            text={text}
             isSpinning={isSpinning}
             duration={1200}
           />
         </div>
       </div>
-      
+
       {/* Lever mechanism */}
       <div className={`slot-lever ${isPulled ? 'pulled' : ''}`}>
         <div className="lever-stick-base" />
         <div className="lever-stick" />
-        <div 
+        <div
           className="lever-ball"
           onClick={handlePull}
         />

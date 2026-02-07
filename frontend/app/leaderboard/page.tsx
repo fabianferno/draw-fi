@@ -3,6 +3,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatEther, parseEther } from 'ethers';
+import type { ComponentType, SVGProps } from 'react';
+import {
+  TrophyIcon,
+  UsersIcon,
+  CurrencyDollarIcon,
+  ChartBarIcon,
+  ClockIcon,
+  UserCircleIcon,
+  StarIcon,
+  FireIcon,
+  PencilSquareIcon,
+  SparklesIcon,
+  BoltIcon,
+  MusicalNoteIcon,
+  PaintBrushIcon,
+  ChartBarSquareIcon,
+} from '@heroicons/react/24/outline';
 import { Header, Footer, ConnectWalletButton } from '@/components/layout';
 import { NoiseEffect } from '@/components/ui/NoiseEffect';
 import { getLeaderboard, getUserStats, getLeaderboardStats } from '@/lib/api/leaderboard';
@@ -40,11 +57,24 @@ const itemVariants = {
   },
 };
 
-// Generate avatar emoji from address
-const getAvatar = (address: string): string => {
-  const emojis = ['🐱', '🎨', '👑', '📈', '✏️', '🧙', '🏄', '🥷', '🎸', '🎭', '🚀', '💎', '⭐', '🔥', '🎯'];
-  const index = parseInt(address.slice(2, 4), 16) % emojis.length;
-  return emojis[index];
+// Avatar icons (heroicons) - pick by address
+const AVATAR_ICONS: ComponentType<SVGProps<SVGSVGElement>>[] = [
+  PencilSquareIcon,
+  ChartBarIcon,
+  TrophyIcon,
+  PaintBrushIcon,
+  SparklesIcon,
+  FireIcon,
+  BoltIcon,
+  MusicalNoteIcon,
+  StarIcon,
+  ChartBarSquareIcon,
+  UserCircleIcon,
+];
+
+const getAvatarIcon = (address: string): ComponentType<SVGProps<SVGSVGElement>> => {
+  const index = parseInt(address.slice(2, 4), 16) % AVATAR_ICONS.length;
+  return AVATAR_ICONS[index];
 };
 
 // Generate username from address
@@ -223,11 +253,11 @@ export default function LeaderboardPage() {
   const getRankBadge = (rank: number) => {
     switch (rank) {
       case 1:
-        return '🥇';
+        return <TrophyIcon className="w-6 h-6" aria-hidden />;
       case 2:
-        return '🥈';
+        return <StarIcon className="w-6 h-6" aria-hidden />;
       case 3:
-        return '🥉';
+        return <FireIcon className="w-6 h-6" aria-hidden />;
       default:
         return `#${rank}`;
     }
@@ -369,12 +399,14 @@ export default function LeaderboardPage() {
             transition={{ duration: 0.5 }}
           >
             <motion.h1
-              className="text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4"
+              className="flex items-center justify-center gap-3 text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4"
               style={{ textShadow: '4px 4px 0 #000000' }}
               animate={{ scale: [1, 1.02, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              🏆 LEADERBOARD 🏆
+              <TrophyIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" aria-hidden />
+              LEADERBOARD
+              <TrophyIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" aria-hidden />
             </motion.h1>
             <p className="text-lg text-white/70">
               Top traders competing to draw the best futures
@@ -394,10 +426,10 @@ export default function LeaderboardPage() {
             transition={{ delay: 0.2 }}
           >
             {[
-              { label: 'Total Traders', value: stats.totalTraders.toLocaleString(), icon: '👥' },
-              { label: 'Total Volume', value: formatPnL(stats.totalVolume), icon: '💰' },
-              { label: 'Positions Today', value: stats.positionsToday.toString(), icon: '📊' },
-              { label: 'Avg Win Rate', value: `${stats.avgWinRate.toFixed(1)}%`, icon: '🎯' },
+              { label: 'Total Traders', value: stats.totalTraders.toLocaleString(), Icon: UsersIcon },
+              { label: 'Total Volume', value: formatPnL(stats.totalVolume), Icon: CurrencyDollarIcon },
+              { label: 'Positions Today', value: stats.positionsToday.toString(), Icon: ChartBarIcon },
+              { label: 'Avg Win Rate', value: `${stats.avgWinRate.toFixed(1)}%`, Icon: TrophyIcon },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -407,7 +439,9 @@ export default function LeaderboardPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 * i }}
               >
-                <div className="text-2xl mb-2">{stat.icon}</div>
+                <div className="mb-2 text-[#00E5FF]">
+                  <stat.Icon className="w-8 h-8" aria-hidden />
+                </div>
                 <div className="text-2xl font-bold text-[#00E5FF]">{stat.value}</div>
                 <div className="text-xs text-white/60">{stat.label}</div>
               </motion.div>
@@ -432,7 +466,17 @@ export default function LeaderboardPage() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {sort === 'pnl' ? '💰 By PnL' : '⏰ Recent'}
+                {sort === 'pnl' ? (
+                  <>
+                    <CurrencyDollarIcon className="w-4 h-4 inline-block mr-1.5 align-middle" aria-hidden />
+                    By PnL
+                  </>
+                ) : (
+                  <>
+                    <ClockIcon className="w-4 h-4 inline-block mr-1.5 align-middle" aria-hidden />
+                    Recent
+                  </>
+                )}
               </motion.button>
             ))}
           </motion.div>
@@ -520,7 +564,10 @@ export default function LeaderboardPage() {
                               </span>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-2xl">{getAvatar(trader.address)}</span>
+                                  {(() => {
+                                    const AvatarIcon = getAvatarIcon(trader.address);
+                                    return <AvatarIcon className="w-8 h-8 text-[#00E5FF]" aria-hidden />;
+                                  })()}
                                   <span className="font-bold text-[#00E5FF]">{getUsername(trader.address)}</span>
                                   {isCurrentUser && <span className="text-xs bg-[#00E5FF] text-[#000000] px-2 py-0.5 rounded">You</span>}
                                 </div>
@@ -558,7 +605,10 @@ export default function LeaderboardPage() {
                             </motion.span>
                           </div>
                           <div className="col-span-3 flex items-center gap-3">
-                            <span className="text-3xl">{getAvatar(trader.address)}</span>
+                            {(() => {
+                              const AvatarIcon = getAvatarIcon(trader.address);
+                              return <AvatarIcon className="w-10 h-10 text-[#00E5FF]" aria-hidden />;
+                            })()}
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-[#00E5FF]">{getUsername(trader.address)}</span>
@@ -632,7 +682,7 @@ export default function LeaderboardPage() {
             {isConnected && address && userStats ? (
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl">🎮</div>
+                  <UserCircleIcon className="w-14 h-14 text-[#00E5FF] shrink-0" aria-hidden />
                   <div>
                     <h3 className="text-xl font-bold text-[#00E5FF]">Your Ranking</h3>
                     <div className="text-white/80 space-y-1">
@@ -648,7 +698,7 @@ export default function LeaderboardPage() {
             ) : (
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl">🎮</div>
+                  <UserCircleIcon className="w-14 h-14 text-[#00E5FF] shrink-0" aria-hidden />
                   <div>
                     <h3 className="text-xl font-bold text-[#00E5FF]">Your Ranking</h3>
                     <p className="text-white/60">Connect your wallet to see your position</p>

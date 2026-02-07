@@ -8,6 +8,7 @@ import { PositionService } from '../futures/positionService.js';
 import { PositionCloser } from '../futures/positionCloser.js';
 import { PositionDatabase } from '../database/positionDatabase.js';
 import type { YellowService } from '../yellow/yellowService.js';
+import { getPositionIdsForUser } from '../yellow/relayerService.js';
 import logger from '../utils/logger.js';
 import config from '../config/config.js';
 
@@ -498,7 +499,9 @@ export class APIServer {
       }
 
       const address = Array.isArray(req.params.address) ? req.params.address[0] : req.params.address;
-      const positionIds = await this.positionService.getUserPositions(address);
+      const contractIds = await this.positionService.getUserPositions(address);
+      const relayerIds = getPositionIdsForUser(address);
+      const positionIds = [...new Set([...contractIds, ...relayerIds])].sort((a, b) => a - b);
       const stats = await this.positionService.getUserStats(address);
 
       res.json({

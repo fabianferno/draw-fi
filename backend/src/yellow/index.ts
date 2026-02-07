@@ -5,5 +5,6 @@ export {
     EIP712_DOMAIN,
     FUND_POSITION_TYPES,
     getPositionUser,
+    getPositionIdsForUser,
 } from './relayerService.js';
 export type { FundPositionParams } from './relayerService.js';

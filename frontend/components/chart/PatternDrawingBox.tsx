@@ -465,6 +465,7 @@ export function PatternDrawingBox({
               onClick={handleApply}
               disabled={points.length < 2 || isOpeningPosition}
               className="flex-1"
+              leverColor="#dc2626"
             />
             <motion.button
               onClick={handleClear}

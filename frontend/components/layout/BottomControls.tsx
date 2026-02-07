@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { WalletIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
+type PositionStatus = 'idle' | 'trading' | 'awaiting_settlement' | 'closed';
+
 interface BottomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -12,7 +14,14 @@ interface BottomControlsProps {
   isConnected?: boolean;
   batchPnL?: number | null;
   yellowDepositBalance?: string;
+  /** Status shown in the right slot (replaces "Draw" / "+Nm" when active) */
+  isOpeningPosition?: boolean;
+  positionStatus?: PositionStatus;
+  statusMessageIndex?: number;
+  timeRemaining?: number | null;
 }
+
+const TRADING_MESSAGES = ['Trading...', 'Future booming...', 'Position active...'] as const;
 
 export function BottomControls({
   onZoomIn,
@@ -23,7 +32,12 @@ export function BottomControls({
   isConnected = false,
   batchPnL = null,
   yellowDepositBalance = '0',
+  isOpeningPosition = false,
+  positionStatus = 'idle',
+  statusMessageIndex = 0,
+  timeRemaining = null,
 }: BottomControlsProps) {
+  const showStatus = isOpeningPosition || positionStatus !== 'idle';
   return (
     <motion.div
       className="fixed bottom-0 left-0 right-0 z-40"
@@ -94,10 +108,45 @@ export function BottomControls({
                 </motion.div>
               </div>
 
-              {/* Right: Status & Clear */}
+              {/* Right: Status (Opening/Trading/Settlement/PnL) or +Nm or Draw & Clear */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                {/* Status */}
-                {selectedMinute && hasPoints ? (
+                {/* Status: opening, trading, awaiting settlement, or closed PnL */}
+                {showStatus ? (
+                  <motion.div
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 bg-[#0a0a0a]/80 border-2 border-[#00E5FF] rounded-lg shadow-[2px_2px_0_0_#00E5FF] min-w-0"
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 500 }}
+                  >
+                    <motion.span
+                      className="text-[#00E5FF] shrink-0"
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ repeat: Infinity, duration: 1 }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 17.25V21h3.75M21 3l-9.4 9.4a2.25 2.25 0 01-3.183 0l-2.358-2.362A2.251 2.251 0 003 12.94" />
+                      </svg>
+                    </motion.span>
+                    <span className="text-xs sm:text-sm font-bold text-[#00E5FF] truncate">
+                      {isOpeningPosition && 'Opening position...'}
+                      {!isOpeningPosition && positionStatus === 'trading' && (
+                        <>
+                          {TRADING_MESSAGES[statusMessageIndex % TRADING_MESSAGES.length]}
+                          {timeRemaining !== null && timeRemaining > 0 && (
+                            <span className="ml-1 text-[#00E5FF]/80">({timeRemaining}s)</span>
+                          )}
+                        </>
+                      )}
+                      {!isOpeningPosition && positionStatus === 'awaiting_settlement' && 'Awaiting settlement...'}
+                      {!isOpeningPosition && positionStatus === 'closed' && batchPnL !== null && (
+                        <span className={batchPnL >= 0 ? 'text-emerald-300' : 'text-red-300'}>
+                          PnL: {batchPnL >= 0 ? '+' : ''}{batchPnL.toFixed(4)} ETH
+                        </span>
+                      )}
+                    </span>
+                  </motion.div>
+                ) : selectedMinute && hasPoints ? (
                   <motion.div
                     className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-[#00E5FF]/20 border-2 border-[#00E5FF] rounded-full"
                     initial={{ scale: 0 }}

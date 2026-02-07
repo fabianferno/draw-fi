@@ -3,10 +3,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatEther } from 'ethers';
+import {
+  DocumentTextIcon,
+  LockClosedIcon,
+  CurrencyDollarIcon,
+  ChartBarIcon,
+  StarIcon,
+  ClockIcon,
+} from '@heroicons/react/24/outline';
 import { Header, Footer } from '@/components/layout';
 import { NoiseEffect } from '@/components/ui/NoiseEffect';
 import { getClosedPositions, getUserStats } from '@/lib/api/leaderboard';
+import { getOpenPositionsForUser } from '@/lib/api/positions';
 import type { LeaderboardEntry, UserStats } from '@/types/leaderboard';
+import type { PositionDetail } from '@/lib/api/positions';
 import { usePrivyWallet } from '@/hooks/usePrivyWallet';
 
 type SortBy = 'pnl' | 'timestamp';
@@ -36,8 +46,10 @@ export default function HistoryPage() {
   const [sortBy, setSortBy] = useState<SortBy>('timestamp');
   const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
   const [positions, setPositions] = useState<LeaderboardEntry[]>([]);
+  const [openPositions, setOpenPositions] = useState<PositionDetail[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [openLoading, setOpenLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
@@ -104,7 +116,7 @@ export default function HistoryPage() {
     };
   }, [positions]);
 
-  // Fetch user positions
+  // Fetch closed positions (from DB / leaderboard)
   const fetchUserPositions = async () => {
     if (!address || !isConnected) {
       setPositions([]);
@@ -127,6 +139,21 @@ export default function HistoryPage() {
     }
   };
 
+  // Fetch open positions (from contract via backend)
+  const fetchOpenPositions = async () => {
+    if (!address || !isConnected) return;
+    try {
+      setOpenLoading(true);
+      const open = await getOpenPositionsForUser(address);
+      setOpenPositions(open);
+    } catch (err) {
+      console.error('Failed to fetch open positions:', err);
+      setOpenPositions([]);
+    } finally {
+      setOpenLoading(false);
+    }
+  };
+
   // Fetch user stats
   const fetchUserStats = async () => {
     if (!address || !isConnected) {
@@ -146,9 +173,11 @@ export default function HistoryPage() {
   useEffect(() => {
     if (isConnected && address) {
       fetchUserPositions();
+      fetchOpenPositions();
       fetchUserStats();
     } else {
       setLoading(false);
+      setOpenPositions([]);
     }
   }, [address, isConnected, limit, offset]);
 
@@ -158,6 +187,7 @@ export default function HistoryPage() {
 
     const interval = setInterval(() => {
       fetchUserPositions();
+      fetchOpenPositions();
       fetchUserStats();
     }, 30000);
 
@@ -214,12 +244,13 @@ export default function HistoryPage() {
     });
   };
 
-  const formatAmount = (amount: string) => {
+  const formatAmount = (amount: string | bigint) => {
     try {
-      const ethValue = formatEther(amount);
+      const ethValue = formatEther(typeof amount === 'bigint' ? amount : amount);
       return parseFloat(ethValue).toFixed(4);
     } catch {
-      return (parseFloat(amount) / 1e18).toFixed(4);
+      const s = typeof amount === 'bigint' ? amount.toString() : amount;
+      return (parseFloat(s) / 1e18).toFixed(4);
     }
   };
 
@@ -237,12 +268,14 @@ export default function HistoryPage() {
             transition={{ duration: 0.5 }}
           >
             <motion.h1
-              className="text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4"
+              className="text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4 flex items-center justify-center gap-3"
               style={{ textShadow: '4px 4px 0 #000000' }}
               animate={{ scale: [1, 1.02, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              📜 TRADE HISTORY 📜
+              <DocumentTextIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" />
+              TRADE HISTORY
+              <DocumentTextIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" />
             </motion.h1>
             <p className="text-lg text-white/70">
               Your complete trading history and performance
@@ -263,7 +296,7 @@ export default function HistoryPage() {
             >
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl">🔐</div>
+                  <LockClosedIcon className="w-14 h-14 text-[#00E5FF] shrink-0" />
                   <div>
                     <h3 className="text-xl font-bold text-[#00E5FF]">Connect Your Wallet</h3>
                     <p className="text-white/60">Connect your wallet to view your trade history</p>
@@ -305,10 +338,10 @@ export default function HistoryPage() {
               transition={{ delay: 0.2 }}
             >
               {[
-                { label: 'Total PnL', value: formatPnL(aggregatedStats.totalPnL, true), icon: '💰' },
-                { label: 'Win Rate', value: `${aggregatedStats.winRate.toFixed(1)}%`, icon: '🎯' },
-                { label: 'Total Trades', value: aggregatedStats.totalTrades.toString(), icon: '📊' },
-                { label: 'Best Trade', value: formatPnL(aggregatedStats.bestTrade, true), icon: '⭐' },
+                { label: 'Total PnL', value: formatPnL(aggregatedStats.totalPnL, true), Icon: CurrencyDollarIcon },
+                { label: 'Win Rate', value: `${aggregatedStats.winRate.toFixed(1)}%`, Icon: ChartBarIcon },
+                { label: 'Total Trades', value: aggregatedStats.totalTrades.toString(), Icon: ChartBarIcon },
+                { label: 'Best Trade', value: formatPnL(aggregatedStats.bestTrade, true), Icon: StarIcon },
               ].map((stat, i) => (
                 <motion.div
                   key={stat.label}
@@ -318,7 +351,9 @@ export default function HistoryPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 * i }}
                 >
-                  <div className="text-2xl mb-2">{stat.icon}</div>
+                  <div className="mb-2">
+                    <stat.Icon className="w-8 h-8 text-[#00E5FF]" />
+                  </div>
                   <div className={`text-2xl font-bold ${stat.label === 'Total PnL' && aggregatedStats.totalPnL < 0 ? 'text-red-400' : 'text-[#00E5FF]'}`}>
                     {stat.value}
                   </div>
@@ -347,7 +382,19 @@ export default function HistoryPage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {sort === 'pnl' ? '💰 By PnL' : '⏰ Recent'}
+                  <span className="flex items-center gap-2">
+                    {sort === 'pnl' ? (
+                      <>
+                        <CurrencyDollarIcon className="w-4 h-4" />
+                        By PnL
+                      </>
+                    ) : (
+                      <>
+                        <ClockIcon className="w-4 h-4" />
+                        Recent
+                      </>
+                    )}
+                  </span>
                 </motion.button>
               ))}
             </motion.div>
@@ -371,7 +418,59 @@ export default function HistoryPage() {
             </motion.div>
           )}
 
-          {/* Positions Table */}
+          {/* Open Positions (in progress) */}
+          {isConnected && address && (openLoading || openPositions.length > 0) && (
+            <motion.div
+              className="mb-8 rounded-2xl border-4 border-[#00E5FF] bg-[#0a0a0a]/90 overflow-hidden shadow-[8px_8px_0_0_#000000]"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="px-6 py-4 bg-[#000000]/80 border-b-3 border-[#00E5FF] flex items-center justify-between">
+                <span className="text-sm font-bold text-[#00E5FF]">Open positions</span>
+                <span className="text-xs text-[#00E5FF]/70">Settles in ~1 min; then appears below</span>
+              </div>
+              {openLoading ? (
+                <div className="p-6 text-center text-white/60">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[#00E5FF]" />
+                  <p className="mt-2 text-sm">Loading open positions...</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#00E5FF]/20">
+                  {openPositions.map((pos) => {
+                    const openTs = typeof pos.openTimestamp === 'bigint' ? Number(pos.openTimestamp) : Number(pos.openTimestamp);
+                    return (
+                      <div
+                        key={pos.positionId ?? openTs}
+                        className="grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-4 hover:bg-[#000000]/30 transition-colors"
+                      >
+                        <div className="md:col-span-2 flex items-center gap-2">
+                          <span className="font-mono text-white/80">#{pos.positionId}</span>
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/50">
+                            Open
+                          </span>
+                        </div>
+                        <div className="md:col-span-2 flex items-center text-sm text-white/80">
+                          Opened {formatDate(openTs)}
+                        </div>
+                        <div className="md:col-span-2 flex items-center text-white/80">
+                          {formatAmount(pos.amount)} ETH
+                        </div>
+                        <div className="md:col-span-2 flex items-center text-white/80">
+                          {pos.leverage}x
+                        </div>
+                        <div className="md:col-span-4 flex items-center text-white/50 text-sm">
+                          PnL after settlement
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Closed Positions Table */}
           {isConnected && address && (
             <motion.div
               className="rounded-2xl border-4 border-[#00E5FF] bg-[#0a0a0a]/90 overflow-hidden shadow-[8px_8px_0_0_#000000]"
@@ -398,11 +497,11 @@ export default function HistoryPage() {
                 </div>
               )}
 
-              {/* Empty State */}
-              {!loading && !error && sortedPositions.length === 0 && (
+              {/* Empty State (no closed and no open) */}
+              {!loading && !error && sortedPositions.length === 0 && openPositions.length === 0 && !openLoading && (
                 <div className="p-8 text-center text-white/60">
                   <p className="text-xl mb-2">No trades yet</p>
-                  <p className="text-sm">Start trading to see your history here!</p>
+                  <p className="text-sm">Start trading to see your history here! Open positions appear above until they settle.</p>
                 </div>
               )}
 
@@ -532,7 +631,7 @@ export default function HistoryPage() {
             >
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl">📊</div>
+                  <ChartBarIcon className="w-14 h-14 text-[#00E5FF] shrink-0" />
                   <div>
                     <h3 className="text-xl font-bold text-[#00E5FF]">Your Statistics</h3>
                     <div className="text-white/80 space-y-1">

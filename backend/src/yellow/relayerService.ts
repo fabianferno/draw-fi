@@ -58,6 +58,16 @@ export function getPositionUser(positionId: number): string | undefined {
   return positionToUser.get(positionId);
 }
 
+/** Position IDs opened by the relayer on behalf of this user (Yellow flow). */
+export function getPositionIdsForUser(userAddress: string): number[] {
+  const normalized = userAddress.toLowerCase();
+  const ids: number[] = [];
+  for (const [id, user] of positionToUser.entries()) {
+    if (user.toLowerCase() === normalized) ids.push(id);
+  }
+  return ids;
+}
+
 export class RelayerService {
   private provider: ethers.Provider;
   private wallet: ethers.Wallet;

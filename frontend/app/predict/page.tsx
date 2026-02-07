@@ -55,12 +55,10 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   useEffect(() => {
     clearPrediction();
     setSelectedMinute(null);
-    setDebugInfo('');
   }, [selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps -- only run when pair changes
 
   const [barSpacing, setBarSpacing] = useState(3);
   const [selectedMinute, setSelectedMinute] = useState<number | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
   const [amount, setAmount] = useState<number>(0.01);
   const [leverage, setLeverage] = useState<number>(2500);
   const [positionIds, setPositionIds] = useState<number[]>([]);
@@ -164,7 +162,6 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const handleClear = () => {
     clearPrediction();
     setSelectedMinute(null);
-    setDebugInfo('');
   };
 
   const handleZoomIn = () => {
@@ -340,12 +337,6 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         };
       });
 
-      setDebugInfo(
-        `${offsetMinutes}min window starting @ ${new Date(
-          futureStartTime * 1000,
-        ).toLocaleTimeString()}`,
-      );
-
       clearPrediction();
       setSelectedMinute(offsetMinutes);
 
@@ -499,65 +490,9 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         </NoiseEffect>
 
 
-        {/* Status Info */}
-        <AnimatePresence>
-          {(isOpeningPosition || debugInfo || positionStatus !== 'idle') && (
-            <motion.div
-              className="relative overflow-hidden"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-[#00E5FF]/20 via-[#000000]/20 to-[#00E5FF]/20 animate-pulse" />
-              <div className="relative flex flex-col sm:flex-row items-center justify-center gap-2 px-4 py-3 bg-[#0a0a0a]/60 border-2 border-[#00E5FF] rounded-xl">
-                <motion.span
-                  className="text-lg"
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                >
-                  🎯
-                </motion.span>
-                <div className="flex flex-col items-center sm:items-start gap-1">
-                  {isOpeningPosition && (
-                    <span className="text-sm font-bold text-[#00E5FF]">
-                      Opening position...
-                    </span>
-                  )}
-                  {!isOpeningPosition && positionStatus === 'trading' && (
-                    <span className="text-sm font-bold text-[#00E5FF]">
-                      {['Trading...', 'Future booming...', 'Position active...'][statusMessageIndex]}
-                      {timeRemaining !== null && timeRemaining > 0 && (
-                        <span className="ml-2 text-xs text-[#00E5FF]/80">
-                          ({timeRemaining}s left)
-                        </span>
-                      )}
-                    </span>
-                  )}
-
-                  {!isOpeningPosition && positionStatus === 'awaiting_settlement' && (
-                    <span className="text-sm font-bold text-[#00E5FF]">
-                      Awaiting settlement... crunching the future lines
-                    </span>
-                  )}
-
-                  {!isOpeningPosition && positionStatus === 'closed' && batchPnL !== null && (
-                    <span
-                      className={`text-sm font-bold ${batchPnL >= 0 ? 'text-emerald-300' : 'text-red-300'
-                        }`}
-                    >
-                      PnL:{' '}
-                      {batchPnL >= 0 ? '+' : ''}
-                      {batchPnL.toFixed(4)} ETH
-                    </span>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
 
-      {/* Bottom Controls */}
+      {/* Bottom Controls (status: Opening/Trading/Settlement/PnL shown in right slot) */}
       <BottomControls
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -567,6 +502,10 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         isConnected={isConnected}
         batchPnL={batchPnL}
         yellowDepositBalance={depositBalance}
+        isOpeningPosition={isOpeningPosition}
+        positionStatus={positionStatus}
+        statusMessageIndex={statusMessageIndex}
+        timeRemaining={timeRemaining}
       />
     </div>
 
