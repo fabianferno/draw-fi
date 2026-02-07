@@ -12,11 +12,12 @@ interface PatternPoint {
 }
 
 interface PatternDrawingBoxProps {
-  onPatternComplete: (points: PatternPoint[], offsetMinutes: number) => void;
+  onPatternComplete: (points: PatternPoint[], offsetMinutes: number) => void | Promise<void>;
   amount: number;
   leverage: number;
   onAmountChange: (amount: number) => void;
   onLeverageChange: (leverage: number) => void;
+  isOpeningPosition?: boolean;
 }
 
 export function PatternDrawingBox({
@@ -25,6 +26,7 @@ export function PatternDrawingBox({
   leverage,
   onAmountChange,
   onLeverageChange,
+  isOpeningPosition = false,
 }: PatternDrawingBoxProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -237,10 +239,14 @@ export function PatternDrawingBox({
     finishDrawing();
   };
 
-  const handleApply = () => {
-    if (points.length > 1) {
-      onPatternComplete(points, selectedOffset);
+  const handleApply = async () => {
+    if (points.length < 2) return;
+    try {
+      await Promise.resolve(onPatternComplete(points, selectedOffset));
       handleClear();
+    } catch (err) {
+      // Error already surfaced via alert in parent; keep pattern so user can retry
+      console.error('Pattern apply failed', err);
     }
   };
 
@@ -455,9 +461,9 @@ export function PatternDrawingBox({
           </div>
           <div className="flex w-full gap-2">
             <SlotMachineLeverButton
-              text="DRAWFI"
+              text={isOpeningPosition ? '...' : 'DRAWFI'}
               onClick={handleApply}
-              disabled={points.length < 2}
+              disabled={points.length < 2 || isOpeningPosition}
               className="flex-1"
             />
             <motion.button

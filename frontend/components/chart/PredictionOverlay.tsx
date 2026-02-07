@@ -169,9 +169,9 @@ export function PredictionOverlay({
             const firstPointOffset = firstPoint.time - (visibleRange.from as number);
             const startX = (firstPointOffset / timeRangeWidth) * chartWidth;
 
-            // Original canvas was 600x200, scale to fit chart while preserving aspect ratio
+            // Match PatternDrawingBox canvas: 600x300
             const canvasWidth = 600;
-            const canvasHeight = 200;
+            const canvasHeight = 300;
 
             // Scale factor: fit the drawing within a reasonable portion of the chart
             // Use the time range to determine X scale
@@ -186,9 +186,8 @@ export function PredictionOverlay({
             const relativeCanvasX = point.canvasX - (firstPoint.canvasX ?? 0);
             const xCoord = startX + (relativeCanvasX * scaleX);
 
-            // Calculate Y: center the drawing vertically on the chart
-            // Canvas Y=100 (middle) should map to chart center
-            const canvasMidY = 100;
+            // Calculate Y: center the drawing vertically on the chart (canvas middle = 150)
+            const canvasMidY = canvasHeight / 2;
             const chartMidY = chartHeight / 2;
             const relativeCanvasY = point.canvasY - canvasMidY;
             const yCoord = chartMidY + (relativeCanvasY * scaleY);
@@ -197,13 +196,14 @@ export function PredictionOverlay({
           }
         }
 
-        // Fallback to time/price based conversion
+        // Fallback: use time/price so the prediction line appears at correct price level
         const visibleRange = timeScale.getVisibleRange();
-        if (visibleRange) {
+        const series = chartRef.current.series;
+        if (visibleRange && series) {
           const timeRangeWidth = (visibleRange.to as number) - (visibleRange.from as number);
           const timeOffset = point.time - (visibleRange.from as number);
           const xCoord = (timeOffset / timeRangeWidth) * chartWidth;
-          const yCoord = chartHeight / 2; // Default to center if no canvas coords
+          const yCoord = series.priceToCoordinate(point.price) ?? chartHeight / 2;
           return { x: xCoord, y: yCoord };
         }
 
@@ -449,45 +449,45 @@ export function PredictionOverlay({
         />
       )}
 
-      {/* After drawing - lime green prediction line behind cat */}
-      {!isDrawing && points.length > 0 && catPosition && (
-        (() => {
-          const pixelPoints = points
-            .map(p => convertToPixelCoordinates(p, points))
-            .filter(p => p !== null) as { x: number; y: number }[];
+      {/* After drawing - prediction line on chart (shift to cat when cat position available) */}
+      {!isDrawing && points.length > 0 && (() => {
+        const pixelPoints = points
+          .map(p => convertToPixelCoordinates(p, points))
+          .filter(p => p !== null) as { x: number; y: number }[];
 
-          if (pixelPoints.length === 0) return null;
+        if (pixelPoints.length === 0) return null;
 
-          // Keep original drawn shape, but shift Y to be centered on cat's Y level
-          const avgY = pixelPoints.reduce((sum, p) => sum + p.y, 0) / pixelPoints.length;
-          const yOffset = catPosition.y - avgY;
-          const shiftedPoints = pixelPoints.map(p => ({ x: p.x, y: p.y + yOffset }));
+        const pointsToRender = catPosition
+          ? (() => {
+            const avgY = pixelPoints.reduce((sum, p) => sum + p.y, 0) / pixelPoints.length;
+            const yOffset = catPosition.y - avgY;
+            return pixelPoints.map(p => ({ x: p.x, y: p.y + yOffset }));
+          })()
+          : pixelPoints;
 
-          // Generate smooth path preserving the drawn shape
-          let d = `M ${shiftedPoints[0].x},${shiftedPoints[0].y}`;
-          for (let i = 1; i < shiftedPoints.length; i++) {
-            const prev = shiftedPoints[i - 1];
-            const curr = shiftedPoints[i];
-            const cpx = prev.x + (curr.x - prev.x) / 2;
-            const cpy = prev.y + (curr.y - prev.y) / 2;
-            d += ` Q ${cpx},${cpy} ${curr.x},${curr.y}`;
-          }
+        let d = `M ${pointsToRender[0].x},${pointsToRender[0].y}`;
+        for (let i = 1; i < pointsToRender.length; i++) {
+          const prev = pointsToRender[i - 1];
+          const curr = pointsToRender[i];
+          const cpx = prev.x + (curr.x - prev.x) / 2;
+          const cpy = prev.y + (curr.y - prev.y) / 2;
+          d += ` Q ${cpx},${cpy} ${curr.x},${curr.y}`;
+        }
 
-          return (
-            <path
-              d={d}
-              stroke="#00E5FF"
-              strokeWidth={4}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                filter: 'drop-shadow(0 0 8px rgba(0, 229, 255, 0.8))'
-              }}
-            />
-          );
-        })()
-      )}
+        return (
+          <path
+            d={d}
+            stroke="#00E5FF"
+            strokeWidth={4}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              filter: 'drop-shadow(0 0 8px rgba(0, 229, 255, 0.8))'
+            }}
+          />
+        );
+      })()}
 
     </svg>
   );

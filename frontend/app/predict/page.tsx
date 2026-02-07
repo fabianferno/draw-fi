@@ -68,6 +68,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const [batchPnL, setBatchPnL] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [statusMessageIndex, setStatusMessageIndex] = useState(0);
+  const [isOpeningPosition, setIsOpeningPosition] = useState(false);
   const yellowNonceRef = { current: 0 };
 
   const { request: requestFaucet, loading: faucetLoading, result: faucetResult } = useYellowFaucet(address ?? null);
@@ -178,7 +179,14 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
     points: Array<{ x: number; y: number }>,
     offsetMinutes: number,
   ) => {
-    if (!priceData || priceData.length === 0 || points.length === 0) return;
+    if (!priceData || priceData.length === 0) {
+      alert('Price data is still loading. Please wait for the chart to connect and try again.');
+      return;
+    }
+    if (points.length === 0) {
+      alert('Please draw a pattern with at least 2 points before pulling the lever.');
+      return;
+    }
 
     const currentPrice = priceData[priceData.length - 1].value;
 
@@ -217,6 +225,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       return;
     }
 
+    setIsOpeningPosition(true);
     const commitmentIds: string[] = [];
     try {
       for (let i = 0; i < offsetMinutes; i++) {
@@ -257,93 +266,97 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       return;
     }
 
-    const valueWei = parseEther(amt.toString());
-    const openedIds: number[] = [];
+    try {
+      const valueWei = parseEther(amt.toString());
+      const openedIds: number[] = [];
 
-    for (let i = 0; i < commitmentIds.length; i++) {
-      try {
-        const commitmentId = commitmentIds[i];
-        if (!commitmentId?.trim()) continue;
-        const deadline = Math.floor(Date.now() / 1000) + 300;
-        const nonce = ++yellowNonceRef.current;
-        const signature = await signFundPosition(signer, {
-          userAddress: address,
-          amountWei: valueWei,
-          leverage: lev,
-          commitmentId,
-          nonce: BigInt(nonce),
-          deadline: BigInt(deadline),
-        });
-        const result = await openPositionWithYellowBalance({
-          userAddress: address,
-          amountWei: valueWei.toString(),
-          leverage: lev,
-          commitmentId,
-          signature,
-          nonce,
-          deadline,
-        });
-        openedIds.push(result.positionId);
-      } catch (err) {
-        console.error('Yellow position failed', err);
-        const message = err instanceof Error ? err.message : 'Failed to open position';
-        const isFundingUnavailable =
-          message.includes('not available') ||
-          message.includes('not enabled') ||
-          message.includes('disabled') ||
-          message.includes('relayer');
-        const isAmountBelowMin =
-          message.includes('amount below minimum') || message.includes('below contract minimum');
-        const friendlyMessage = isFundingUnavailable
-          ? "Pay with Yellow balance isn't enabled on this server. Try opening with wallet ETH instead, or ask the operator to enable the Yellow relayer."
-          : isAmountBelowMin
-            ? 'Position amount is below the contract minimum of 0.001 ETH. Please use at least 0.001 ETH per position.'
-            : message;
-        alert(`Error: ${friendlyMessage}`);
-        if (openedIds.length === 0) return;
-        break;
+      for (let i = 0; i < commitmentIds.length; i++) {
+        try {
+          const commitmentId = commitmentIds[i];
+          if (!commitmentId?.trim()) continue;
+          const deadline = Math.floor(Date.now() / 1000) + 300;
+          const nonce = ++yellowNonceRef.current;
+          const signature = await signFundPosition(signer, {
+            userAddress: address,
+            amountWei: valueWei,
+            leverage: lev,
+            commitmentId,
+            nonce: BigInt(nonce),
+            deadline: BigInt(deadline),
+          });
+          const result = await openPositionWithYellowBalance({
+            userAddress: address,
+            amountWei: valueWei.toString(),
+            leverage: lev,
+            commitmentId,
+            signature,
+            nonce,
+            deadline,
+          });
+          openedIds.push(result.positionId);
+        } catch (err) {
+          console.error('Yellow position failed', err);
+          const message = err instanceof Error ? err.message : 'Failed to open position';
+          const isFundingUnavailable =
+            message.includes('not available') ||
+            message.includes('not enabled') ||
+            message.includes('disabled') ||
+            message.includes('relayer');
+          const isAmountBelowMin =
+            message.includes('amount below minimum') || message.includes('below contract minimum');
+          const friendlyMessage = isFundingUnavailable
+            ? "Pay with Yellow balance isn't enabled on this server. Try opening with wallet ETH instead, or ask the operator to enable the Yellow relayer."
+            : isAmountBelowMin
+              ? 'Position amount is below the contract minimum of 0.001 ETH. Please use at least 0.001 ETH per position.'
+              : message;
+          alert(`Error: ${friendlyMessage}`);
+          if (openedIds.length === 0) return;
+          break;
+        }
       }
+
+      if (openedIds.length > 0) {
+        setPositionIds(openedIds);
+        setPositionStatus('trading');
+        setTimeRemaining(60);
+        setBatchPnL(null);
+        refreshYellowDeposit();
+      }
+
+      const predictionPoints = sampledPoints.map((point) => {
+        const normalizedX = point.x / canvasWidth;
+        const time = futureStartTime + normalizedX * totalDurationSeconds;
+
+        const normalizedY = point.y / canvasHeight;
+        const price = maxPrice - (normalizedY * (maxPrice - minPrice));
+
+        return {
+          x: 0,
+          y: 0,
+          time: Math.floor(time),
+          price,
+          canvasX: point.x,
+          canvasY: point.y,
+        };
+      });
+
+      setDebugInfo(
+        `${offsetMinutes}min window starting @ ${new Date(
+          futureStartTime * 1000,
+        ).toLocaleTimeString()}`,
+      );
+
+      clearPrediction();
+      setSelectedMinute(offsetMinutes);
+
+      startDrawing(predictionPoints[0]);
+      for (let i = 1; i < predictionPoints.length; i++) {
+        addPoint(predictionPoints[i]);
+      }
+      finishDrawing();
+    } finally {
+      setIsOpeningPosition(false);
     }
-
-    if (openedIds.length > 0) {
-      setPositionIds(openedIds);
-      setPositionStatus('trading');
-      setTimeRemaining(60);
-      setBatchPnL(null);
-      refreshYellowDeposit();
-    }
-
-    const predictionPoints = sampledPoints.map((point) => {
-      const normalizedX = point.x / canvasWidth;
-      const time = futureStartTime + normalizedX * totalDurationSeconds;
-
-      const normalizedY = point.y / canvasHeight;
-      const price = maxPrice - (normalizedY * (maxPrice - minPrice));
-
-      return {
-        x: 0,
-        y: 0,
-        time: Math.floor(time),
-        price,
-        canvasX: point.x,
-        canvasY: point.y,
-      };
-    });
-
-    setDebugInfo(
-      `${offsetMinutes}min window starting @ ${new Date(
-        futureStartTime * 1000,
-      ).toLocaleTimeString()}`,
-    );
-
-    clearPrediction();
-    setSelectedMinute(offsetMinutes);
-
-    startDrawing(predictionPoints[0]);
-    for (let i = 1; i < predictionPoints.length; i++) {
-      addPoint(predictionPoints[i]);
-    }
-    finishDrawing();
   };
 
   return (
@@ -474,16 +487,21 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <PatternDrawingBox onPatternComplete={handlePatternComplete} amount={amount} leverage={leverage} onAmountChange={function (amount: number): void {
-              setAmount(amount);
-            }} onLeverageChange={(leverage) => setLeverage(leverage)} />
+            <PatternDrawingBox
+              onPatternComplete={handlePatternComplete}
+              amount={amount}
+              leverage={leverage}
+              onAmountChange={(amt: number) => setAmount(amt)}
+              onLeverageChange={(lev) => setLeverage(lev)}
+              isOpeningPosition={isOpeningPosition}
+            />
           </motion.div>
         </NoiseEffect>
 
 
         {/* Status Info */}
         <AnimatePresence>
-          {(debugInfo || positionStatus !== 'idle') && (
+          {(isOpeningPosition || debugInfo || positionStatus !== 'idle') && (
             <motion.div
               className="relative overflow-hidden"
               initial={{ opacity: 0, height: 0 }}
@@ -500,7 +518,12 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
                   🎯
                 </motion.span>
                 <div className="flex flex-col items-center sm:items-start gap-1">
-                  {positionStatus === 'trading' && (
+                  {isOpeningPosition && (
+                    <span className="text-sm font-bold text-[#00E5FF]">
+                      Opening position...
+                    </span>
+                  )}
+                  {!isOpeningPosition && positionStatus === 'trading' && (
                     <span className="text-sm font-bold text-[#00E5FF]">
                       {['Trading...', 'Future booming...', 'Position active...'][statusMessageIndex]}
                       {timeRemaining !== null && timeRemaining > 0 && (
@@ -511,13 +534,13 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
                     </span>
                   )}
 
-                  {positionStatus === 'awaiting_settlement' && (
+                  {!isOpeningPosition && positionStatus === 'awaiting_settlement' && (
                     <span className="text-sm font-bold text-[#00E5FF]">
                       Awaiting settlement... crunching the future lines
                     </span>
                   )}
 
-                  {positionStatus === 'closed' && batchPnL !== null && (
+                  {!isOpeningPosition && positionStatus === 'closed' && batchPnL !== null && (
                     <span
                       className={`text-sm font-bold ${batchPnL >= 0 ? 'text-emerald-300' : 'text-red-300'
                         }`}
