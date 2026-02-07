@@ -111,6 +111,10 @@ body {
   }
 }
 
+html {
+  background-color: #0a0a0a !important;
+}
+
 .nyan-animate {
   animation: rainbow-shift 3s ease-in-out infinite;
 }
