@@ -23,6 +23,7 @@ export interface Config {
   yellowClearnodeWsUrl: string;
   yellowPrivateKey: string | null;
   yellowRelayerEnabled: boolean;
+  yellowEthToYtestRate: number;
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -57,6 +58,11 @@ export const config: Config = {
   yellowClearnodeWsUrl: getOptionalEnvVar('YELLOW_CLEARNODE_WS_URL', 'wss://clearnet-sandbox.yellow.com/ws'),
   yellowPrivateKey: process.env.YELLOW_RELAYER_PRIVATE_KEY || null,
   yellowRelayerEnabled: process.env.YELLOW_RELAYER_ENABLED === 'true',
+  /** 1 ETH (1e18 wei) = this many ytest.usd units (6 decimals). e.g. 100 = 1 ETH = 100 ytest.usd */
+  yellowEthToYtestRate: (() => {
+    const v = parseFloat(process.env.YELLOW_ETH_TO_ytest_RATE || '100');
+    return Number.isFinite(v) && v > 0 ? v : 100;
+  })(),
 };
 
 export default config;
