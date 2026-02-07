@@ -18,7 +18,7 @@ export function Header({ showStatus, statusText }: HeaderProps) {
       animate={{ y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <div className="px-4 py-3 sm:py-4 max-w-7xl mx-auto">
+      <div className="px-4  max-w-7xl mx-auto">
         <div className="flex items-center justify-between gap-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
@@ -28,14 +28,9 @@ export function Header({ showStatus, statusText }: HeaderProps) {
               whileTap={{ scale: 0.95 }}
             >
               <div className="absolute inset-0 rounded-lg bg-[#00E5FF]/40 blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />
-              <Image
-                src="/logo.png"
-                alt="Draw-Fi Logo"
-                width={48}
-                height={48}
-                className="relative drop-shadow-lg rounded-lg"
-                style={{ imageRendering: 'pixelated' }}
-              />
+              <h1 className="text-4xl font-venite px-2 bg-[#00E5FF] sm:px-4 md:px-6 py-2 sm:py-2 md:py-2 font-bold text-black">
+                DW
+              </h1>
             </motion.div>
             <div className="flex flex-col">
               <motion.h1
