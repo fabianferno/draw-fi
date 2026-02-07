@@ -12,6 +12,9 @@ import { PNLCalculator } from './pnl/pnlCalculator.js';
 import { PositionService } from './futures/positionService.js';
 import { PositionCloser } from './futures/positionCloser.js';
 import { PositionDatabase } from './database/positionDatabase.js';
+import { YellowService } from './yellow/yellowService.js';
+import { YellowBalanceDatabase } from './yellow/yellowBalanceDatabase.js';
+import { startYellowDepositPoller, stopYellowDepositPoller } from './yellow/yellowDepositPoller.js';
 import logger from './utils/logger.js';
 import config from './config/config.js';
 
@@ -35,6 +38,8 @@ class MNTPriceOracleApp {
   private positionService?: PositionService;
   private positionCloser?: PositionCloser;
   private positionDatabase?: PositionDatabase;
+  private yellowBalanceDb?: YellowBalanceDatabase;
+  private yellowService?: YellowService;
 
   constructor() {
     logger.info('Initializing Price Oracle & Line Futures', {
@@ -85,6 +90,15 @@ class MNTPriceOracleApp {
 
       this.pnlCalculator = new PNLCalculator();
 
+      this.yellowBalanceDb = new YellowBalanceDatabase();
+      this.yellowBalanceDb.initialize();
+      this.yellowService = new YellowService(
+        this.predictionService,
+        this.pnlCalculator,
+        this.retrievalService,
+        this.yellowBalanceDb
+      );
+
       this.positionService = new PositionService(
         this.futuresContractStorage,
         this.predictionService,
@@ -92,7 +106,8 @@ class MNTPriceOracleApp {
         this.eigenDASubmitter,
         this.contractStorage,
         this.retrievalService,
-        this.positionDatabase
+        this.positionDatabase,
+        this.yellowService
       );
 
       this.positionCloser = new PositionCloser(
@@ -110,7 +125,8 @@ class MNTPriceOracleApp {
       this.predictionService,
       this.positionService,
       this.positionCloser,
-      this.positionDatabase
+      this.positionDatabase,
+      this.yellowService
     );
 
     this.setupSignalHandlers();
@@ -133,6 +149,10 @@ class MNTPriceOracleApp {
       if (this.positionCloser) {
         this.positionCloser.start();
         logger.info('Position closer cron job started');
+      }
+
+      if (this.yellowBalanceDb) {
+        startYellowDepositPoller(this.yellowBalanceDb);
       }
 
       // Start API server
@@ -165,6 +185,8 @@ class MNTPriceOracleApp {
         logger.info('Position closer cron job stopped');
       }
 
+      stopYellowDepositPoller();
+
       // Stop health monitor
       this.healthMonitor.stop();
 
@@ -175,6 +197,11 @@ class MNTPriceOracleApp {
       if (this.positionDatabase) {
         this.positionDatabase.close();
         logger.info('Position database connection closed');
+      }
+
+      if (this.yellowBalanceDb) {
+        this.yellowBalanceDb.close();
+        logger.info('Yellow balance database closed');
       }
 
       logger.info('Price Oracle & Line Futures application stopped successfully');

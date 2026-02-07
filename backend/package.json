@@ -1,7 +1,7 @@
 {
-  "name": "mnt-price-oracle-backend",
+  "name": "price-oracle-backend",
   "version": "1.0.0",
-  "description": "Backend server for MNT Price Oracle with EigenDA integration",
+  "description": "Backend server for Price Oracle with EigenDA integration",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -12,8 +12,7 @@
   },
   "keywords": [
     "oracle",
-    "eigenda",
-    "mantle",
+    "eigenda", 
     "price-feed"
   ],
   "author": "",
