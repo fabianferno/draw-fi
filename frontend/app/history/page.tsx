@@ -543,7 +543,7 @@ export default function HistoryPage() {
                             </div>
                             <div className="flex justify-between text-sm text-white/70">
                               <span>Leverage: {position.leverage}x</span>
-                              <span>Accuracy: {(position.accuracy * 100).toFixed(1)}%</span>
+                              <span>Accuracy: {((position.accuracy ?? 0) * 100).toFixed(1)}%</span>
                             </div>
                             {position.txHash && (
                               <div className="text-xs text-white/50 font-mono break-all">
@@ -572,7 +572,7 @@ export default function HistoryPage() {
                               </span>
                             </div>
                             <div className="col-span-2 flex items-center justify-center">
-                              <span className="text-white/80">{(position.accuracy * 100).toFixed(1)}%</span>
+                              <span className="text-white/80">{((position.accuracy ?? 0) * 100).toFixed(1)}%</span>
                             </div>
                             <div className="col-span-2 flex items-center justify-center">
                               {position.txHash ? (

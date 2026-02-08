@@ -11,6 +11,8 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import { Wallet } from 'ethers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,8 +42,9 @@ function clearDb() {
 }
 
 const HHE10402 = 'HHE10402';
-const MAX_DEPLOY_ATTEMPTS = 4;
+const MAX_DEPLOY_ATTEMPTS = 6;
 const WAIT_FOR_CONFIRMS_MS = 90 * 1000; // 90s (~5 blocks on Sepolia)
+const WAIT_PROGRESS_INTERVAL_MS = 15 * 1000; // log every 15s so it's clear we're not stuck
 
 function runDeploy() {
   const env = { ...process.env };
@@ -63,10 +66,16 @@ async function runDeployWithRetry() {
       lastError = e;
       const out = (e.stderr || '') + (e.stdout || '') + (e.message || '');
       if (out.includes(HHE10402) && attempt < MAX_DEPLOY_ATTEMPTS) {
+        const waitSec = WAIT_FOR_CONFIRMS_MS / 1000;
         console.warn(
-          `\n⚠️  HHE10402: Pending transactions need 5 confirmations. Waiting ${WAIT_FOR_CONFIRMS_MS / 1000}s then retry (${attempt}/${MAX_DEPLOY_ATTEMPTS})...\n`
+          `\n⚠️  HHE10402: Pending transactions need 5 confirmations. Waiting ${waitSec}s then retry (${attempt}/${MAX_DEPLOY_ATTEMPTS})...\n`
         );
-        await new Promise((r) => setTimeout(r, WAIT_FOR_CONFIRMS_MS));
+        // Show progress so it's obvious the script isn't stuck
+        for (let elapsed = 0; elapsed < WAIT_FOR_CONFIRMS_MS; elapsed += WAIT_PROGRESS_INTERVAL_MS) {
+          await new Promise((r) => setTimeout(r, WAIT_PROGRESS_INTERVAL_MS));
+          const remaining = Math.ceil((WAIT_FOR_CONFIRMS_MS - elapsed) / 1000);
+          if (remaining > 0) process.stdout.write(`   ... ${remaining}s remaining\n`);
+        }
         continue;
       }
       throw e;
@@ -109,8 +118,19 @@ function updateEnvFile(filePath, updates) {
   console.log('Updated', filePath);
 }
 
+function getDeployerAddress() {
+  dotenv.config({ path: backendEnvPath });
+  const key = process.env.ETHEREUM_SEPOLIA_PRIVATE_KEY?.replace(/"/g, '').trim();
+  if (!key) return null;
+  return new Wallet(key).address;
+}
+
 async function main() {
   console.log('=== Redeploy and reconfigure ===\n');
+
+  const deployer = getDeployerAddress();
+  if (deployer) console.log('Deployer address:', deployer, '\n');
+  else console.warn('Deployer address unknown (ETHEREUM_SEPOLIA_PRIVATE_KEY not set in backend/.env.local)\n');
 
   clearDb();
 

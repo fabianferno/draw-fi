@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "deploy": "tsx scripts/deploy.ts"
+    "deploy": "tsx scripts/deploy.ts",
+    "deploy-direct": "node scripts/run-deploy-direct.cjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.4",

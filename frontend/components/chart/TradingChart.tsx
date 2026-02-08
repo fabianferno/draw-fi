@@ -407,7 +407,7 @@ export function TradingChart({
   }
 
   return (
-    <div ref={containerRef} className="relative w-full filter hue-rotate-220">
+    <div ref={containerRef} className="relative w-full">
       {/* Current Price Display + Zoom - Top Left (only after hydration to avoid mismatch) */}
       {isMounted && currentPrice && (
         <div className="absolute top-2 left-2 z-30 flex items-center gap-1.5">

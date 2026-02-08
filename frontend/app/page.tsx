@@ -100,8 +100,7 @@ export default function Home() {
                 className="text-sm sm:text-base md:text-md leading-relaxed text-white/80 text-center md:text-left"
                 variants={itemVariants}
               >
-                A trading game where <strong className="text-[#00E5FF]">futures trades are expressed as drawings</strong>, not orders.
-                Turn your market intuition into entertainment finance.
+                is a gamified, derivatives trading platform built on the Yellow network. A gas-free, instant futures trading game where users draw price predictions instead of placing orders.
               </motion.p>
 
               <motion.div

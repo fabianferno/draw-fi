@@ -673,23 +673,46 @@ export class APIServer {
 
   /**
    * Handle closed positions request
+   * When DB returns empty for a user, falls back to fetching closed positions from chain
+   * (handles case where PositionCloser failed to save to DB but position was closed on-chain)
    */
   private handleClosedPositions = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (!this.positionDatabase) {
-        res.status(503).json({ error: 'Leaderboard service not available' });
-        return;
-      }
-
       const limit = parseInt(req.query.limit as string) || 100;
       const offset = parseInt(req.query.offset as string) || 0;
       const user = req.query.user as string;
 
-      let result;
+      let result: { positions: Array<{ positionId: number; userAddress: string; amount: string; leverage: number; pnl: string; openTimestamp: number; closeTimestamp: number; accuracy: number; txHash: string }>; total: number };
+
       if (user && /^0x[a-fA-F0-9]{40}$/.test(user)) {
-        result = this.positionDatabase.getPositionsByUser(user, limit, offset);
-      } else {
+        // Get from DB
+        const dbResult = this.positionDatabase
+          ? this.positionDatabase.getPositionsByUser(user, 1000, 0) // Fetch more for merging
+          : { positions: [], total: 0 };
+
+        // Also fetch from chain (handles positions closed on-chain but not saved to DB)
+        let chainPositions: typeof dbResult.positions = [];
+        if (this.positionService) {
+          try {
+            chainPositions = await this.fetchClosedPositionsFromChain(user);
+          } catch (chainErr) {
+            logger.debug('Chain fallback for closed positions failed', { user, error: chainErr });
+          }
+        }
+
+        // Merge: DB entries take precedence (have accuracy, txHash); add chain-only positions
+        const dbIds = new Set(dbResult.positions.map((p) => p.positionId));
+        const fromChainOnly = chainPositions.filter((p) => !dbIds.has(p.positionId));
+        const merged = [...dbResult.positions, ...fromChainOnly].sort(
+          (a, b) => b.closeTimestamp - a.closeTimestamp
+        );
+        const paginated = merged.slice(offset, offset + limit);
+        result = { positions: paginated, total: merged.length };
+      } else if (this.positionDatabase) {
         result = this.positionDatabase.getAllPositions(limit, offset);
+      } else {
+        res.status(503).json({ error: 'Leaderboard service not available' });
+        return;
       }
 
       res.json(result);
@@ -698,6 +721,43 @@ export class APIServer {
       res.status(500).json({ error: 'Failed to get closed positions' });
     }
   };
+
+  /**
+   * Fetch closed positions for a user directly from the contract (fallback when DB is empty)
+   */
+  private async fetchClosedPositionsFromChain(
+    userAddress: string
+  ): Promise<Array<{ positionId: number; userAddress: string; amount: string; leverage: number; pnl: string; openTimestamp: number; closeTimestamp: number; accuracy: number; txHash: string }>> {
+    if (!this.positionService) return [];
+
+    const normalizedUser = userAddress.toLowerCase();
+    const positionIds = await this.positionService.getUserPositions(userAddress);
+    const closed: Array<{ positionId: number; userAddress: string; amount: string; leverage: number; pnl: string; openTimestamp: number; closeTimestamp: number; accuracy: number; txHash: string }> = [];
+
+    for (const positionId of positionIds) {
+      try {
+        const position = await this.positionService.getPosition(positionId);
+        if (!position.isOpen && position.closeTimestamp) {
+          const closeTs = Number(position.closeTimestamp.toString());
+          closed.push({
+            positionId,
+            userAddress: normalizedUser,
+            amount: position.amount.toString(),
+            leverage: position.leverage,
+            pnl: position.pnl.toString(),
+            openTimestamp: Number(position.openTimestamp.toString()),
+            closeTimestamp: closeTs,
+            accuracy: 0, // Not available from contract alone
+            txHash: ''
+          });
+        }
+      } catch (err) {
+        logger.debug('Failed to fetch position from chain', { positionId, error: err });
+      }
+    }
+
+    return closed;
+  }
 
   /**
    * Handle leaderboard stats request
