@@ -1,8 +1,17 @@
 'use client';
 
+import {
+  HandRaisedIcon,
+  GlobeAltIcon,
+  ChartBarIcon,
+  PencilSquareIcon,
+  PlayIcon,
+} from '@heroicons/react/24/outline';
 import type { Tour } from 'nextstepjs';
 
 const PREDICT_TOUR_ID = 'predictTour';
+
+const iconClass = 'size-6';
 
 export const predictTourId = PREDICT_TOUR_ID;
 
@@ -11,7 +20,7 @@ export const onboardingSteps: Tour[] = [
     tour: PREDICT_TOUR_ID,
     steps: [
       {
-        icon: '👋',
+        icon: <HandRaisedIcon className={iconClass} />,
         title: 'Welcome to Draw-Fi',
         content:
           "You're on the Play page. Here you draw your price prediction and open a position. Let's walk through the main areas.",
@@ -23,7 +32,7 @@ export const onboardingSteps: Tour[] = [
         pointerRadius: 10,
       },
       {
-        icon: '📊',
+        icon: <GlobeAltIcon className={iconClass} />,
         title: 'Choose your market',
         content:
           'Select the token pair you want to trade. The chart and your prediction will use this market.',
@@ -35,7 +44,7 @@ export const onboardingSteps: Tour[] = [
         pointerRadius: 10,
       },
       {
-        icon: '📈',
+        icon: <ChartBarIcon className={iconClass} />,
         title: 'Live chart',
         content:
           'This is the price chart. After you place a position, your drawn prediction will appear here and resolve over time.',
@@ -47,7 +56,7 @@ export const onboardingSteps: Tour[] = [
         pointerRadius: 10,
       },
       {
-        icon: '✏️',
+        icon: <PencilSquareIcon className={iconClass} />,
         title: 'Draw your prediction',
         content:
           'Draw a line from left to right: where you think the price will go. You can pick a time horizon (1–5 min), set leverage, and amount below.',
@@ -59,11 +68,11 @@ export const onboardingSteps: Tour[] = [
         pointerRadius: 10,
       },
       {
-        icon: '🎰',
+        icon: <PlayIcon className={iconClass} />,
         title: 'Pull the lever',
         content:
           'When your pattern is ready, set your amount and pull the DRAWFI lever to open your position. Good luck!',
-        selector: '#onboard-draw-box',
+        selector: '#onboard-lever',
         side: 'top',
         showControls: true,
         showSkip: true,

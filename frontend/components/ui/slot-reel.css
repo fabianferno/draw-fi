@@ -52,9 +52,9 @@
   justify-content: center;
   font-family: var(--font-geist-mono), 'Courier New', monospace;
   font-size: 22px;
-  font-weight: 700;
-  color: #00E5FF;
-  background: #000000;
+  font-weight: 900;
+  color: #000;
+  background: #00E5FF;
   border-top: 1px solid rgba(0,0,0,0.25);
   border-bottom: 1px solid rgba(0,0,0,0.25);
   backface-visibility: hidden;
@@ -66,7 +66,7 @@
 .slot-fence {
   width: 4px;
   height: 100%;
-  background: #00E5FF;
+  background: #000;
   border-left: 1px solid #0a0a0a;
   border-right: 1px solid #0a0a0a;
   flex-shrink: 0;
@@ -74,7 +74,7 @@
 
 /* Compact version for button */
 .slot-machine-button .slot-machine-text {
-  border-radius: 8px;
+  border-radius: 5px;
 }
 
 .slot-machine-button .slot-reel-container {

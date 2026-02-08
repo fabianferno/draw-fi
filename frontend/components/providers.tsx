@@ -5,6 +5,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { defineChain } from 'viem';
 import { NextStepProvider, NextStepReact } from 'nextstepjs';
 import { TokenPairProvider } from '@/contexts/TokenPairContext';
+import { OnboardingCard } from '@/components/onboarding/OnboardingCard';
 import { onboardingSteps } from '@/lib/onboarding/predictTourSteps';
 
 const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
@@ -71,6 +72,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <NextStepProvider>
             <NextStepReact
               steps={onboardingSteps}
+              cardComponent={OnboardingCard}
               onComplete={markOnboardingSeen}
               onSkip={markOnboardingSeen}
             >

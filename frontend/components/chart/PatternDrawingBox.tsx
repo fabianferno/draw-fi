@@ -3,6 +3,7 @@
 import { useRef, useState, MouseEvent, TouchEvent, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlotMachineLeverButton } from '@/components/ui/SlotMachineLever';
+import { NoiseEffect } from '../ui/NoiseEffect';
 
 const NEON_COLOR = '#00E5FF';
 
@@ -459,18 +460,23 @@ export function PatternDrawingBox({
               whileFocus={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
             />
           </div>
-          <div className="flex w-full gap-2">
-            <SlotMachineLeverButton
-              text={isOpeningPosition ? '...' : 'DRAWFI'}
-              onClick={handleApply}
-              disabled={points.length < 2 || isOpeningPosition}
-              className="flex-1"
-              leverColor="#dc2626"
-            />
+          <div id="onboard-lever" className="flex flex-row-reverse w-full gap-2">
+            <NoiseEffect
+              opacity={1}
+              className="w-full"
+            >
+              <SlotMachineLeverButton
+                text={isOpeningPosition ? '...' : 'DRAWFI'}
+                onClick={handleApply}
+                disabled={points.length < 2 || isOpeningPosition}
+                className="flex-1"
+                leverColor="#dc2626"
+              />
+            </NoiseEffect>
             <motion.button
               onClick={handleClear}
               disabled={points.length === 0}
-              className="px-2 py-2 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-xs font-bold shadow-[3px_3px_0_0_#00E5FF] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-xl font-black shadow-[3px_3px_0_0_#00E5FF] disabled:opacity-30 disabled:cursor-not-allowed"
               whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
               whileTap={{ x: 2, y: 2, boxShadow: '1px 1px 0 0 #00E5FF' }}
             >
