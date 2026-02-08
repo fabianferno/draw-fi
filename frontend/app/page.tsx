@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { NoiseEffect } from "@/components/ui/NoiseEffect";
 import { Header, Footer } from "@/components/layout";
+import ColorBlends from "@/components/ColorBlends";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -46,9 +47,26 @@ export default function Home() {
         <div className="relative z-10 flex-1">
           {/* Hero Section */}
           <section className="relative flex min-h-[70vh] flex-col md:flex-row items-center justify-center px-4 sm:px-8 md:px-14 py-8 md:py-12 text-start gap-8 md:gap-0 overflow-hidden">
+            {/* Animated color blends background */}
+            <div className="absolute inset-0 z-0 opacity-30">
+              <ColorBlends
+                colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
+                rotation={0}
+                speed={0.2}
+                scale={1}
+                frequency={1}
+                warpStrength={1}
+                mouseInfluence={1}
+                parallax={0.5}
+                noise={0.1}
+                transparent
+                autoRotate={0}
+                className="absolute inset-0 w-full h-full"
+              />
+            </div>
             {/* Cyan gradient radial - light, bottom */}
             <div
-              className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none"
+              className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none z-1"
               aria-hidden="true"
               style={{
                 background: 'radial-gradient(ellipse 100% 80% at 50% 100%, rgba(0, 229, 255, 0.12) 0%, transparent 65%)',
@@ -212,9 +230,26 @@ export default function Home() {
           </section>
 
           {/* CTA Section */}
-          <section className="relative bg-[#000000]/60 backdrop-blur-xl py-12 sm:py-16 md:py-24 px-4">
+          <section className="relative overflow-hidden py-12 sm:py-16 md:py-24 px-4">
+            <div className="absolute inset-0 z-0">
+              <ColorBlends
+                colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
+                rotation={0}
+                speed={0.2}
+                scale={1}
+                frequency={1}
+                warpStrength={1}
+                mouseInfluence={1}
+                parallax={0.5}
+                noise={0.1}
+                transparent
+                autoRotate={0}
+                className="absolute inset-0 w-full h-full"
+              />
+            </div>
+            <div className="absolute inset-0 z-1 bg-[#000000]/60 backdrop-blur-sm pointer-events-none" aria-hidden />
             <motion.div
-              className="mx-auto max-w-3xl text-center"
+              className="relative z-10 mx-auto max-w-3xl text-center"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

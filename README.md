@@ -44,7 +44,7 @@ Position closes ──▶ Payout via Yellow transfer to user
 
 | Directory | Description |
 |-----------|-------------|
-| `frontend/` | Next.js 16 app – landing, predict, leaderboard, chart & drawing UI |
+| `frontend/` | Next.js 16 app – landing, predict, leaderboard, history, chart & drawing UI |
 | `backend/` | Node.js/Express – price oracle, EigenDA, prediction upload, position closing |
 | `contracts/` | Solidity (Hardhat) – LineFutures, PriceOracle |
 
@@ -67,7 +67,8 @@ Position closes ──▶ Payout via Yellow transfer to user
 - **TradingChart** – Live price chart (Bybit) with drawing overlay
 - **PatternDrawingBox** – Canvas to draw prediction curves, time horizon (1–5 min), amount, leverage
 - **Token pair selector** – BTC/USDT, ETH/USDT, AAVE/USDT, DOGE/USDT
-- **Yellow by default** – Deposit ytest.usd via Yellow Network, open positions, settle on-chain, receive payouts in Yellow
+- **History page** – View open and closed positions with PnL, user stats, and position details
+- **Yellow Network** – Deposit ytest.usd via Yellow Network, open positions, settle on-chain, receive payouts in Yellow
 
 ## PnL Formula
 
@@ -88,6 +89,8 @@ Position closes ──▶ Payout via Yellow transfer to user
 
 ### Environment
 
+Copy `backend/env.example` to `backend/.env.local` and fill in values.
+
 **Backend** (`backend/.env.local`):
 
 ```
@@ -105,17 +108,18 @@ YELLOW_ETH_TO_ytest_RATE=100 # 1 ETH = 100 ytest.usd
 YELLOW_FAUCET_ALSO_CREDIT=true # Faucet also credits Draw-Fi balance (sandbox - no transfer needed)
 ```
 
-**Frontend** (`.env.local`):
+**Frontend** (`frontend/.env.local`):
 
 ```
 NEXT_PUBLIC_FUTURES_CONTRACT_ADDRESS=
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 NEXT_PUBLIC_PRIVY_APP_ID=   # for embedded wallet
+NEXT_PUBLIC_ETHEREUM_RPC_URL=   # optional, Sepolia RPC
 ```
 
 ### Run
 
-1. Start EigenDA proxy (e.g. port 3100)
+1. Start EigenDA proxy (e.g. port 3100) – see `EIGEN_DA_PROXY_SETUP.md` for Docker command
 2. Backend: `cd backend && pnpm dev` (port 3001)
 3. Frontend: `cd frontend && pnpm dev`
 
@@ -137,8 +141,12 @@ See `contracts/DEPLOY.md` and `contracts/DEPLOYMENT.md` for details.
 | `GET /api/latest` | Latest price window |
 | `GET /api/history` | Price history (start, end params) |
 | `POST /api/predictions/upload` | Upload user predictions → EigenDA |
+| `GET /api/predictions/:commitmentId` | Retrieve prediction from EigenDA |
 | `GET /api/positions/open` | Open positions |
+| `GET /api/positions/closed` | Closed positions (limit, offset, user) |
+| `GET /api/positions/user/:address` | User positions |
 | `GET /api/leaderboard` | Leaderboard (limit, offset, sort) |
+| `GET /api/leaderboard/user/:address` | User stats |
 | `POST /api/admin/close-expired` | Close expired positions (requires `x-api-key`) |
 
 ### Yellow Network
