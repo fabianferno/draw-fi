@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers';
+import { BrowserProvider, Contract, formatEther } from 'ethers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNextStep } from 'nextstepjs';
 import { TradingChart } from '@/components/chart/TradingChart';
@@ -20,6 +20,7 @@ import { usePrivyWallet } from '@/hooks/usePrivyWallet';
 import { useYellowFaucet, useYellowDeposit } from '@/hooks/useYellow';
 import { openPositionWithYellowBalance } from '@/lib/api/yellow';
 import { signFundPosition } from '@/lib/yellow/relayer';
+import { ytestToEthWei, getMinYtestAmount } from '@/lib/yellow/ytestConversion';
 import { predictTourId } from '@/lib/onboarding/predictTourSteps';
 
 const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
@@ -73,8 +74,8 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
 
   const [barSpacing, setBarSpacing] = useState(3);
   const [selectedMinute, setSelectedMinute] = useState<number | null>(null);
-  const [amount, setAmount] = useState<number>(0.01);
-  const [leverage, setLeverage] = useState<number>(2500);
+  const [amount, setAmount] = useState<number>(1); // ytest.usd (1 = 0.01 ETH at default rate 100)
+  const [leverage, setLeverage] = useState<number>(500);
   const [positionIds, setPositionIds] = useState<number[]>([]);
   const [positionStatus, setPositionStatus] = useState<'idle' | 'trading' | 'awaiting_settlement' | 'closed'>('idle');
   const [batchPnL, setBatchPnL] = useState<number | null>(null);
@@ -264,10 +265,9 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       return;
     }
     const amt = Number(amount);
-    // LineFutures contract requires minimum 0.001 ETH per position
-    const MIN_ETH = 0.001;
-    if (!Number.isFinite(amt) || amt < MIN_ETH) {
-      alert(`Amount must be at least ${MIN_ETH} ETH to open a position (contract minimum).`);
+    const minYtest = getMinYtestAmount();
+    if (!Number.isFinite(amt) || amt < minYtest) {
+      alert(`Amount must be at least ${minYtest} ytest.usd to open a position.`);
       return;
     }
 
@@ -278,7 +278,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
     }
 
     try {
-      const valueWei = parseEther(amt.toString());
+      const valueWei = ytestToEthWei(amt);
       const openedIds: number[] = [];
 
       for (let i = 0; i < commitmentIds.length; i++) {
@@ -318,7 +318,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
           const friendlyMessage = isFundingUnavailable
             ? "Pay with Yellow balance isn't enabled on this server. Try opening with wallet ETH instead, or ask the operator to enable the Yellow relayer."
             : isAmountBelowMin
-              ? 'Position amount is below the contract minimum of 0.001 ETH. Please use at least 0.001 ETH per position.'
+              ? `Position amount is below minimum. Please use at least ${minYtest} ytest.usd.`
               : message;
           alert(`Error: ${friendlyMessage}`);
           if (openedIds.length === 0) return;
@@ -374,12 +374,12 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       />
 
       <motion.div
-        className="relative z-10 px-3 py-4 sm:px-4 sm:py-6 max-w-7xl mx-auto space-y-2"
+        className="relative z-10 px-3 py-4 sm:px-4 sm:py-6 mb-20 max-w-7xl mx-auto space-y-2"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Token Pair Selector + Yellow Balance */}
+        {/* Token Pair Selector */}
         <motion.section
           id="onboard-token-pair"
           className="mb-4"
@@ -399,39 +399,6 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
               </div>
               <TokenPairSelector />
             </div>
-            {isConnected && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-white/60">
-                  Balance: {yellowDepositLoading ? '...' : (Number(depositBalance) / 1e6).toFixed(2)} ytest.usd
-                </span>
-                <button
-                  type="button"
-                  onClick={() => depositAddress && navigator.clipboard?.writeText(depositAddress)}
-                  className="px-3 py-1.5 rounded-lg border-2 border-emerald-500 bg-[#0a0a0a] text-emerald-400 text-xs font-bold hover:bg-emerald-500/20"
-                  title="Copy deposit address"
-                >
-                  Deposit to {depositAddress ? `${depositAddress.slice(0, 6)}...` : '...'}
-                </button>
-                <motion.button
-                  onClick={() => refreshYellowDeposit()}
-                  className="px-2 py-1.5 rounded border border-emerald-500/50 text-emerald-400 text-xs"
-                >
-                  Refresh
-                </motion.button>
-                <motion.button
-                  onClick={() => requestFaucet()}
-                  disabled={faucetLoading}
-                  className="px-3 py-1.5 rounded-lg border-2 border-amber-500 bg-[#0a0a0a] text-amber-400 text-xs font-bold hover:bg-amber-500/20 disabled:opacity-50"
-                >
-                  {faucetLoading ? 'Requesting...' : 'Get Yellow test tokens'}
-                </motion.button>
-                {faucetResult && (
-                  <span className={`text-xs ${faucetResult.success ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {faucetResult.success ? 'Sent!' : faucetResult.message}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
         </motion.section>
 
@@ -481,6 +448,8 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
                 onAddPoint={addPoint}
                 onFinishDrawing={finishDrawing}
                 barSpacing={barSpacing}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
               />
             </div>
           </motion.div>
@@ -511,14 +480,18 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
 
       {/* Bottom Controls (status: Opening/Trading/Settlement/PnL shown in right slot) */}
       <BottomControls
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
         selectedMinute={selectedMinute}
         hasPoints={currentPoints.length > 0}
         onClear={handleClear}
         isConnected={isConnected}
         batchPnL={batchPnL}
         yellowDepositBalance={depositBalance}
+        yellowDepositLoading={yellowDepositLoading}
+        depositAddress={depositAddress}
+        onRefreshDeposit={refreshYellowDeposit}
+        onRequestFaucet={requestFaucet}
+        faucetLoading={faucetLoading}
+        faucetResult={faucetResult}
         isOpeningPosition={isOpeningPosition}
         positionStatus={positionStatus}
         statusMessageIndex={statusMessageIndex}

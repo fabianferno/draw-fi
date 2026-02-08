@@ -445,20 +445,34 @@ export function PatternDrawingBox({
 
         {/* Action Buttons - Nyan style */}
         <div className="flex flex-col  items-center gap-3">
-          <div className="flex flex-col w-full gap-2">
-            <p className="text-[13px] text-[#00E5FF]/70 font-light">
-              Choose your amount
-            </p>
-            <motion.input
-              type="number"
-              min={0.001}
-              step={0.01}
-              value={amount}
-              onChange={(e) => onAmountChange(Number(e.target.value) || 0)}
-              className="w-full px-3 py-5 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-3xl font-bold shadow-[3px_3px_0_0_#00E5FF] focus:outline-none focus:bg-[#000000]/90"
-              whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-              whileFocus={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-            />
+          <div className="flex w-full gap-3 items-end">
+            <div className="flex flex-col flex-1 min-w-0 gap-2">
+              <p className="text-[13px] text-[#00E5FF]/70 font-light">
+                Amount (ytest.usd)
+              </p>
+              <motion.input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={amount}
+                onChange={(e) => onAmountChange(Number(e.target.value) || 0)}
+                className="w-full px-3 py-5 bg-[#000000] hover:bg-[#000000]/80 border-3 border-[#00E5FF] rounded-xl text-[#00E5FF] text-3xl font-bold shadow-[3px_3px_0_0_#00E5FF] focus:outline-none focus:bg-[#000000]/90"
+                whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
+                whileFocus={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
+              />
+            </div>
+            {/* Potential win estimate - hype */}
+            <div className="flex flex-col gap-0.5 shrink-0 px-3 py-2 rounded-xl bg-[#000000] border-2 border-red-500/60 text-right">
+              <span className="text-[10px] uppercase tracking-wider text-red-400/90 font-bold">
+                Potential win
+              </span>
+              <span className="text-lg sm:text-xl font-black text-red-400">
+                up to ~{(amount * (leverage - 1)).toFixed(1)} ytest
+              </span>
+              <span className="text-[10px] text-white/50">
+                if you nail it
+              </span>
+            </div>
           </div>
           <div id="onboard-lever" className="flex flex-row-reverse w-full gap-2">
             <NoiseEffect

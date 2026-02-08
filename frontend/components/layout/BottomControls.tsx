@@ -5,15 +5,24 @@ import { WalletIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 type PositionStatus = 'idle' | 'trading' | 'awaiting_settlement' | 'closed';
 
+interface FaucetResult {
+  success: boolean;
+  message?: string;
+}
+
 interface BottomControlsProps {
-  onZoomIn: () => void;
-  onZoomOut: () => void;
   selectedMinute: number | null;
   hasPoints: boolean;
   onClear: () => void;
   isConnected?: boolean;
   batchPnL?: number | null;
   yellowDepositBalance?: string;
+  yellowDepositLoading?: boolean;
+  depositAddress?: string | null;
+  onRefreshDeposit?: () => void;
+  onRequestFaucet?: () => void;
+  faucetLoading?: boolean;
+  faucetResult?: FaucetResult | null;
   /** Status shown in the right slot (replaces "Draw" / "+Nm" when active) */
   isOpeningPosition?: boolean;
   positionStatus?: PositionStatus;
@@ -24,14 +33,18 @@ interface BottomControlsProps {
 const TRADING_MESSAGES = ['Trading...', 'Future booming...', 'Position active...'] as const;
 
 export function BottomControls({
-  onZoomIn,
-  onZoomOut,
   selectedMinute,
   hasPoints,
   onClear,
   isConnected = false,
   batchPnL = null,
   yellowDepositBalance = '0',
+  yellowDepositLoading = false,
+  depositAddress = null,
+  onRefreshDeposit,
+  onRequestFaucet,
+  faucetLoading = false,
+  faucetResult = null,
   isOpeningPosition = false,
   positionStatus = 'idle',
   statusMessageIndex = 0,
@@ -48,46 +61,26 @@ export function BottomControls({
       <div className="relative bg-[#000000]/95 backdrop-blur-xl border-t-4 border-[#00E5FF] shadow-[0_-4px_0_0_#0a0a0a]">
         <div className="px-2 py-2 sm:px-4 sm:py-5">
           <div className="max-w-6xl mx-auto">
-            {/* Controls Row */}
-            <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-4 w-full">
-              {/* Left: Zoom Controls */}
+            {/* Single row: Wallet, Profit, Deposit actions (when connected), Status/+Nm/Draw, Clear */}
+            <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-4 w-full flex-nowrap overflow-x-auto">
+              {/* Left: Wallet & Profit */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                <motion.button
-                  onClick={onZoomOut}
-                  className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center bg-[#0a0a0a] border-2 sm:border-3 border-[#00E5FF] rounded-lg text-[#00E5FF] text-base sm:text-xl font-bold shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]"
-                  whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-                  whileTap={{ x: 2, y: 2, boxShadow: '1px 1px 0 0 #00E5FF' }}
-                >
-                  −
-                </motion.button>
-                <motion.button
-                  onClick={onZoomIn}
-                  className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center bg-[#0a0a0a] border-2 sm:border-3 border-[#00E5FF] rounded-lg text-[#00E5FF] text-base sm:text-xl font-bold shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]"
-                  whileHover={{ x: -2, y: -2, boxShadow: '5px 5px 0 0 #00E5FF' }}
-                  whileTap={{ x: 2, y: 2, boxShadow: '1px 1px 0 0 #00E5FF' }}
-                >
-                  +
-                </motion.button>
-              </div>
-
-              {/* Center: Wallet & Profit */}
-              <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-center">
                 {/* Wallet pill - pixel look */}
                 <motion.div
-                  className="min-w-0"
+                  className="min-w-0 shrink-0"
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 rounded-lg border-2 sm:border-3 border-[#00E5FF] bg-[#000000]/50 shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]">
                     <WalletIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#00E5FF] shrink-0" aria-hidden />
                     <span className="font-mono text-xs sm:text-sm md:text-base text-gray-200 tracking-tight truncate">
-                      {isConnected ? `${(Number(yellowDepositBalance) / 1e6).toFixed(2)} ytest` : '0.00'}
+                      {isConnected ? (yellowDepositLoading ? '...' : `${(Number(yellowDepositBalance) / 1e6).toFixed(2)}`) : '0.00'} ytest
                     </span>
                   </div>
                 </motion.div>
 
                 {/* Profit pill - pixel look */}
                 <motion.div
-                  className="min-w-0"
+                  className="min-w-0 shrink-0"
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 rounded-lg border-2 sm:border-3 border-[#00E5FF] bg-[#000000]/50 shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]">
@@ -107,6 +100,48 @@ export function BottomControls({
                   </div>
                 </motion.div>
               </div>
+
+              {/* Center: Deposit actions when connected */}
+              {isConnected && (onRefreshDeposit || onRequestFaucet || depositAddress) && (
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  {depositAddress && (
+                    <motion.button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(depositAddress)}
+                      className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] text-xs font-bold shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 shrink-0"
+                      title="Copy deposit address"
+                    >
+                      Deposit {depositAddress.slice(0, 6)}...
+                    </motion.button>
+                  )}
+                  {onRefreshDeposit && (
+                    <motion.button
+                      onClick={onRefreshDeposit}
+                      className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] text-xs font-bold shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 shrink-0"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Refresh
+                    </motion.button>
+                  )}
+                  {onRequestFaucet && (
+                    <motion.button
+                      onClick={onRequestFaucet}
+                      disabled={faucetLoading}
+                      className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] text-xs font-bold shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 disabled:opacity-50 shrink-0"
+                      whileHover={{ scale: faucetLoading ? 1 : 1.02 }}
+                      whileTap={{ scale: faucetLoading ? 1 : 0.98 }}
+                    >
+                      {faucetLoading ? 'Requesting...' : 'Get test tokens'}
+                    </motion.button>
+                  )}
+                  {faucetResult && (
+                    <span className={`text-xs font-medium shrink-0 ${faucetResult.success ? 'text-emerald-300' : 'text-red-400'}`}>
+                      {faucetResult.success ? 'Sent!' : faucetResult.message}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Right: Status (Opening/Trading/Settlement/PnL) or +Nm or Draw & Clear */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">

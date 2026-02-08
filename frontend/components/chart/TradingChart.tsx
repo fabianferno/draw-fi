@@ -21,6 +21,8 @@ interface TradingChartProps {
   onFinishDrawing: () => void;
   barSpacing?: number;
   onPriceRangeReady?: (currentPrice: number, priceRange: number) => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
 }
 
 export function TradingChart({
@@ -33,6 +35,8 @@ export function TradingChart({
   onAddPoint,
   onFinishDrawing,
   barSpacing = 0.5,
+  onZoomIn,
+  onZoomOut,
 }: TradingChartProps) {
   const chartRef = useRef<ChartCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -404,15 +408,37 @@ export function TradingChart({
 
   return (
     <div ref={containerRef} className="relative w-full filter hue-rotate-220">
-      {/* Current Price Display - Top Left (only after hydration to avoid mismatch) */}
+      {/* Current Price Display + Zoom - Top Left (only after hydration to avoid mismatch) */}
       {isMounted && currentPrice && (
-        <div className="absolute top-2 left-2 z-30 flex items-center gap-1.5 bg-black backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] shadow-[2px_2px_0_0_#00E5FF]">
-          <span className="text-xs">
-            {pairDisplayName}
-          </span>
-          <span className="text-[#00E5FF] font-venite font-bold text-sm sm:text-base">
-            ${currentPrice.toFixed(4)}
-          </span>
+        <div className="absolute top-2 left-2 z-30 flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 bg-black backdrop-blur px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] shadow-[2px_2px_0_0_#00E5FF]">
+            <span className="text-xs">
+              {pairDisplayName}
+            </span>
+            <span className="text-[#00E5FF] font-venite font-bold text-sm sm:text-base">
+              ${currentPrice.toFixed(4)}
+            </span>
+          </div>
+          {onZoomIn && onZoomOut && (
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={onZoomOut}
+                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-[#0a0a0a] border-2 border-[#00E5FF] rounded-lg text-[#00E5FF] text-base font-bold shadow-[2px_2px_0_0_#00E5FF] hover:opacity-90 active:scale-95"
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                onClick={onZoomIn}
+                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-[#0a0a0a] border-2 border-[#00E5FF] rounded-lg text-[#00E5FF] text-base font-bold shadow-[2px_2px_0_0_#00E5FF] hover:opacity-90 active:scale-95"
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
       )}
 
