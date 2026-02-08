@@ -448,7 +448,7 @@ export function PatternDrawingBox({
           <div className="flex w-full gap-3 items-end">
             <div className="flex flex-col flex-1 min-w-0 gap-2">
               <p className="text-[13px] text-[#00E5FF]/70 font-light">
-                Amount (ytest.usd)
+                Amount (USD)
               </p>
               <motion.input
                 type="number"
@@ -467,7 +467,7 @@ export function PatternDrawingBox({
                 Potential win
               </span>
               <span className="text-lg sm:text-xl font-black text-red-400">
-                up to ~{(amount * (leverage - 1)).toFixed(1)} ytest
+                up to ~{(amount * (leverage - 1)).toFixed(1)} USD
               </span>
               <span className="text-[10px] text-white/50">
                 if you nail it

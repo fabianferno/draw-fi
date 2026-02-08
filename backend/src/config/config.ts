@@ -28,6 +28,8 @@ export interface Config {
   yellowEthToYtestRate: number;
   /** When true, faucet success also credits user's Draw-Fi balance (sandbox convenience - no separate transfer needed) */
   yellowFaucetAlsoCredit: boolean;
+  /** Position IDs to never attempt to close (e.g. after EigenDA memstore loss). Comma-separated, e.g. "4,5" */
+  skipPositionIds: number[];
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -72,6 +74,10 @@ export const config: Config = {
     return Number.isFinite(v) && v > 0 ? v : 100;
   })(),
   yellowFaucetAlsoCredit: process.env.YELLOW_FAUCET_ALSO_CREDIT === 'true',
+  skipPositionIds: (process.env.SKIP_POSITION_IDS || '')
+    .split(',')
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => Number.isInteger(n) && n > 0),
 };
 
 export default config;

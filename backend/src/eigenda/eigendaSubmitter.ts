@@ -252,14 +252,24 @@ export class EigenDASubmitter {
       method: 'GET',
     });
 
-        // Handle 404 - data not found (don't retry)
-        if (response.status === 404) {
-          logger.warn('Data not found in EigenDA', { commitment });
-          return null;
-        }
+    // Handle 404 - data not found (don't retry)
+    if (response.status === 404) {
+      logger.warn('Data not found in EigenDA', { commitment });
+      return null;
+    }
 
-        // Handle other non-OK responses
+    // EigenDA proxy returns 500 with "payload not found" when using memstore and data was lost (e.g. restart). Treat as missing.
     if (!response.ok) {
+      const body = await response.text();
+      const isPayloadNotFound =
+        body.includes('payload not found') || body.includes('Payload not found');
+      if (isPayloadNotFound) {
+        logger.warn('Data not found in EigenDA (proxy reported payload not found)', {
+          commitment,
+          proxyStatus: response.status
+        });
+        return null;
+      }
       throw new Error(
         `EigenDA proxy GET returned ${response.status}: ${response.statusText}`
       );

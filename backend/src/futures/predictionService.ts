@@ -181,6 +181,11 @@ export class PredictionService {
 
       const data = await this.eigenDASubmitter.retrieveData(commitmentId) as any;
 
+      // EigenDA returned null (e.g. 404 or proxy "payload not found" after memstore restart)
+      if (data == null) {
+        throw new Error('Predictions not found in EigenDA (data may be unavailable, e.g. proxy restarted with memstore)');
+      }
+
       // Validate retrieved data
       if (data.type !== 'user_predictions') {
         throw new Error('Invalid prediction data type');

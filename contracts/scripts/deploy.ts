@@ -2,8 +2,10 @@ import { ethers } from 'ethers';
 import * as dotenv from 'dotenv';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '../../backend/.env.local') });
 
 async function getWalletAddress(privateKey: string): Promise<string> {
@@ -26,14 +28,20 @@ async function deploy() {
 
   // Step 1: Deploy PriceOracle
   console.log('🚀 Step 1: Deploying PriceOracle...');
-  const oracleDeployCmd = `npx hardhat ignition deploy --network sepolia ignition/modules/PriceOracle.ts --parameters '{"PriceOracleModule":{"submitterAddress":"${walletAddress}"}}'`;
+  const oracleDeployCmd = `npx hardhat ignition deploy --network sepolia ignition/modules/PriceOracle.ts --parameters '{"PriceOracleModule":{"submitterAddress":"${walletAddress}"}}' --reset`;
 
   console.log(`   Running: ${oracleDeployCmd}\n`);
-  const oracleOutput = execSync(oracleDeployCmd, {
-    encoding: 'utf-8',
-    cwd: __dirname + '/..',
-    stdio: 'pipe'
-  });
+  const execOpts = {
+    encoding: 'utf-8' as const,
+    cwd: join(__dirname, '..'),
+    stdio: 'pipe' as const,
+    env: {
+      ...process.env,
+      HARDHAT_IGNITION_CONFIRM_DEPLOYMENT: 'false',
+      HARDHAT_IGNITION_CONFIRM_RESET: 'false',
+    },
+  };
+  const oracleOutput = execSync(oracleDeployCmd, execOpts);
 
   // Extract oracle address from output
   const oracleMatch = oracleOutput.match(/deployed to (0x[a-fA-F0-9]{40})/i);
@@ -45,14 +53,10 @@ async function deploy() {
 
   // Step 2: Deploy LineFutures
   console.log('🚀 Step 2: Deploying LineFutures...');
-  const futuresDeployCmd = `npx hardhat ignition deploy --network sepolia ignition/modules/LineFutures.ts --parameters '{"LineFuturesModule":{"pnlServerAddress":"${walletAddress}","priceOracleAddress":"${oracleAddress}"}}'`;
+  const futuresDeployCmd = `npx hardhat ignition deploy --network sepolia ignition/modules/LineFutures.ts --parameters '{"LineFuturesModule":{"pnlServerAddress":"${walletAddress}","priceOracleAddress":"${oracleAddress}"}}' --reset`;
 
   console.log(`   Running: ${futuresDeployCmd}\n`);
-  const futuresOutput = execSync(futuresDeployCmd, {
-    encoding: 'utf-8',
-    cwd: __dirname + '/..',
-    stdio: 'pipe'
-  });
+  const futuresOutput = execSync(futuresDeployCmd, execOpts);
 
   // Extract futures address from output
   const futuresMatch = futuresOutput.match(/deployed to (0x[a-fA-F0-9]{40})/i);

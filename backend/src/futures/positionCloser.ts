@@ -46,6 +46,7 @@ interface FailedPosition {
 export class PositionCloser {
   private positionService: PositionService;
   private futuresContract: FuturesContractStorage;
+  private skipPositionIds: Set<number>;
   private cronJob: cron.ScheduledTask | null = null;
   private isRunning: boolean = false;
   private delayBetweenClosures: number = 2000; // 2 seconds delay between closures
@@ -54,11 +55,18 @@ export class PositionCloser {
 
   constructor(
     positionService: PositionService,
-    futuresContract: FuturesContractStorage
+    futuresContract: FuturesContractStorage,
+    skipPositionIds: number[] = []
   ) {
     this.positionService = positionService;
     this.futuresContract = futuresContract;
+    this.skipPositionIds = new Set(skipPositionIds);
 
+    if (this.skipPositionIds.size > 0) {
+      logger.info('PositionCloser skipping position IDs', {
+        skipPositionIds: [...this.skipPositionIds]
+      });
+    }
     logger.info('PositionCloser initialized');
   }
 
@@ -105,20 +113,38 @@ export class PositionCloser {
     try {
       logger.debug('Checking for expired positions');
 
-      const closablePositions = await this.futuresContract.getClosablePositions();
+      // Remove skip-listed positions from retry queue so we don't keep them around
+      if (this.skipPositionIds.size > 0) {
+        for (const id of this.skipPositionIds) {
+          if (this.retryQueue.has(id)) {
+            this.retryQueue.delete(id);
+          }
+        }
+      }
 
-      if (closablePositions.length === 0 && this.retryQueue.size === 0) {
+      const closablePositions = await this.futuresContract.getClosablePositions();
+      const filteredClosable = closablePositions.filter((id) => !this.skipPositionIds.has(id));
+
+      if (filteredClosable.length === 0 && this.retryQueue.size === 0) {
         logger.debug('No expired positions found');
         return;
       }
 
+      if (this.skipPositionIds.size > 0 && closablePositions.length !== filteredClosable.length) {
+        logger.debug('Skipping closable positions (in skip list)', {
+          skipped: closablePositions.filter((id) => this.skipPositionIds.has(id)),
+          willAttempt: filteredClosable
+        });
+      }
+
       logger.info('Found closable positions', { 
-        count: closablePositions.length,
+        count: filteredClosable.length,
         retryQueueSize: this.retryQueue.size 
       });
 
-      // Combine new closable positions with retry queue
-      const allPositions = new Set([...closablePositions, ...this.retryQueue.keys()]);
+      // Combine new closable positions with retry queue, excluding skip list
+      const retryIds = [...this.retryQueue.keys()].filter((id) => !this.skipPositionIds.has(id));
+      const allPositions = new Set([...filteredClosable, ...retryIds]);
 
       // Close positions with delay between each
       for (const positionId of allPositions) {

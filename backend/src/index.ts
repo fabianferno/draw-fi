@@ -107,7 +107,8 @@ class MNTPriceOracleApp {
 
       this.positionCloser = new PositionCloser(
         this.positionService,
-        this.futuresContractStorage
+        this.futuresContractStorage,
+        config.skipPositionIds
       );
     } else {
       logger.warn('Futures contract address not configured, futures features disabled');

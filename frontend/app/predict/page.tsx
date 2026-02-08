@@ -122,9 +122,27 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         let anyAwaiting = false;
         let minRemaining: number | null = null;
         let totalClosedPnlWei = BigInt(0);
+        let fetchedCount = 0;
 
         for (const pid of positionIds) {
-          const position = await contract.getPosition(pid);
+          let position: Awaited<ReturnType<typeof contract.getPosition>>;
+          try {
+            position = await contract.getPosition(pid);
+          } catch (getErr: unknown) {
+            // Position may not exist on this chain/contract yet (e.g. wrong network or contract address)
+            const msg = getErr instanceof Error ? getErr.message : String(getErr);
+            if (msg.includes('BAD_DATA') || msg.includes('0x')) {
+              console.warn(
+                'Position not found on contract (wrong network or contract?). Ensure wallet is on the same network as the relayer.',
+                { positionId: pid }
+              );
+            } else {
+              console.warn('Error fetching position', pid, getErr);
+            }
+            continue;
+          }
+
+          fetchedCount += 1;
           if (position.isOpen) {
             anyOpen = true;
             const openTimestampSec = Number(position.openTimestamp?.toString?.() ?? position.openTimestamp);
@@ -133,14 +151,23 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
             if (minRemaining === null || remaining < minRemaining) {
               minRemaining = remaining;
             }
-            const canClose: boolean = await contract.canClosePosition(pid);
-            if (canClose) {
-              anyAwaiting = true;
+            try {
+              const canClose: boolean = await contract.canClosePosition(pid);
+              if (canClose) {
+                anyAwaiting = true;
+              }
+            } catch {
+              // canClose can revert for same reasons; ignore
             }
           } else {
             const pnlWei = BigInt(position.pnl.toString());
             totalClosedPnlWei += pnlWei;
           }
+        }
+
+        // Only update status when we successfully read at least one position
+        if (fetchedCount === 0) {
+          return;
         }
 
         setBatchPnL(Number(formatEther(totalClosedPnlWei)));

@@ -1,7 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WalletIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+
+function DropletIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z" />
+    </svg>
+  );
+}
 
 type PositionStatus = 'idle' | 'trading' | 'awaiting_settlement' | 'closed';
 
@@ -50,6 +59,7 @@ export function BottomControls({
   statusMessageIndex = 0,
   timeRemaining = null,
 }: BottomControlsProps) {
+  const [faucetPopover, setFaucetPopover] = useState(false);
   const showStatus = isOpeningPosition || positionStatus !== 'idle';
   return (
     <motion.div
@@ -60,11 +70,52 @@ export function BottomControls({
     >
       <div className="relative bg-[#000000]/95 backdrop-blur-xl border-t-4 border-[#00E5FF] shadow-[0_-4px_0_0_#0a0a0a]">
         <div className="px-2 py-2 sm:px-4 sm:py-5">
-          <div className="max-w-6xl mx-auto">
-            {/* Single row: Wallet, Profit, Deposit actions (when connected), Status/+Nm/Draw, Clear */}
+          <div className="max-w-7xl mx-auto">
+            {/* Single row: Faucet, Wallet, Profit, Status/+Nm/Draw, Clear */}
             <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-4 w-full flex-nowrap overflow-x-auto">
-              {/* Left: Wallet & Profit */}
+              {/* Left: Faucet (popover "Faucet"), Wallet & Profit */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                {/* Faucet button - left of balance, droplet icon, popover shows "Faucet" */}
+                {onRequestFaucet && (
+                  <div
+                    className="relative shrink-0"
+                    onMouseEnter={() => setFaucetPopover(true)}
+                    onMouseLeave={() => setFaucetPopover(false)}
+                  >
+                    <motion.button
+                      type="button"
+                      onClick={onRequestFaucet}
+                      disabled={faucetLoading}
+                      className="flex items-center justify-center h-13 px-2 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 disabled:opacity-50"
+                      whileHover={{ scale: faucetLoading ? 1 : 1.02 }}
+                      whileTap={{ scale: faucetLoading ? 1 : 0.98 }}
+                      aria-label="Faucet"
+                    >
+                      <DropletIcon className="w-5 h-5 sm:w-6 sm:h-6" /> <span className="text-xs ml-1 sm:text-sm">Faucet</span>
+                    </motion.button>
+                    <AnimatePresence>
+                      {faucetPopover && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1 bg-[#00E5FF] border-2 border-[#0a0a0a] rounded-lg shadow-[2px_2px_0_0_#0a0a0a] z-50 pointer-events-none"
+                        >
+                          <span className="text-xs font-bold text-[#0a0a0a] uppercase tracking-wider whitespace-nowrap">
+                            Faucet
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    {faucetResult && (
+                      <span className={`absolute right-full mr-1 top-1/2 translate-y-1/2 text-xs font-medium whitespace-nowrap ${faucetResult.success ? 'text-emerald-300' : 'text-red-400'}`}>
+                        {faucetResult.success ? 'Sent!' : faucetResult.message}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Wallet pill - pixel look */}
                 <motion.div
                   className="min-w-0 shrink-0"
@@ -73,7 +124,7 @@ export function BottomControls({
                   <div className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 rounded-lg border-2 sm:border-3 border-[#00E5FF] bg-[#000000]/50 shadow-[2px_2px_0_0_#00E5FF] sm:shadow-[3px_3px_0_0_#00E5FF]">
                     <WalletIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#00E5FF] shrink-0" aria-hidden />
                     <span className="font-mono text-xs sm:text-sm md:text-base text-gray-200 tracking-tight truncate">
-                      {isConnected ? (yellowDepositLoading ? '...' : `${(Number(yellowDepositBalance) / 1e6).toFixed(2)}`) : '0.00'} ytest
+                      {isConnected ? (yellowDepositLoading ? '...' : `${(Number(yellowDepositBalance) / 1e6).toFixed(2)}`) : '0.00'} USD
                     </span>
                   </div>
                 </motion.div>
@@ -100,48 +151,6 @@ export function BottomControls({
                   </div>
                 </motion.div>
               </div>
-
-              {/* Center: Deposit actions when connected */}
-              {isConnected && (onRefreshDeposit || onRequestFaucet || depositAddress) && (
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                  {depositAddress && (
-                    <motion.button
-                      type="button"
-                      onClick={() => navigator.clipboard?.writeText(depositAddress)}
-                      className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] text-xs font-bold shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 shrink-0"
-                      title="Copy deposit address"
-                    >
-                      Deposit {depositAddress.slice(0, 6)}...
-                    </motion.button>
-                  )}
-                  {onRefreshDeposit && (
-                    <motion.button
-                      onClick={onRefreshDeposit}
-                      className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] text-xs font-bold shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 shrink-0"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Refresh
-                    </motion.button>
-                  )}
-                  {onRequestFaucet && (
-                    <motion.button
-                      onClick={onRequestFaucet}
-                      disabled={faucetLoading}
-                      className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 border-[#00E5FF] bg-[#0a0a0a] text-[#00E5FF] text-xs font-bold shadow-[2px_2px_0_0_#00E5FF] hover:bg-[#00E5FF]/20 disabled:opacity-50 shrink-0"
-                      whileHover={{ scale: faucetLoading ? 1 : 1.02 }}
-                      whileTap={{ scale: faucetLoading ? 1 : 0.98 }}
-                    >
-                      {faucetLoading ? 'Requesting...' : 'Get test tokens'}
-                    </motion.button>
-                  )}
-                  {faucetResult && (
-                    <span className={`text-xs font-medium shrink-0 ${faucetResult.success ? 'text-emerald-300' : 'text-red-400'}`}>
-                      {faucetResult.success ? 'Sent!' : faucetResult.message}
-                    </span>
-                  )}
-                </div>
-              )}
 
               {/* Right: Status (Opening/Trading/Settlement/PnL) or +Nm or Draw & Clear */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">

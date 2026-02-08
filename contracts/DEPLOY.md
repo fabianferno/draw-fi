@@ -56,6 +56,26 @@ ORACLE_CONTRACT_ADDRESS=<oracle_address_from_step_2>
 - Sepolia Etherscan: https://sepolia.etherscan.io/
 - Search for your deployed contract addresses
 
+## Redeploy and reconfigure (fresh contracts + clear DB)
+
+To redeploy both contracts, clear the backend DB, and update contract addresses everywhere:
+
+```bash
+# From repo root (uses backend/.env.local for keys; deploys with --reset for fresh addresses)
+node backend/scripts/redeploy-and-reconfigure.js
+```
+
+This script:
+
+1. Deletes `backend/positions.db` and any WAL/SHM files
+2. Deploys PriceOracle and LineFutures to Sepolia with `--reset` (new addresses)
+3. Updates `backend/.env.local` with `CONTRACT_ADDRESS`, `FUTURES_CONTRACT_ADDRESS`, `ORACLE_CONTRACT_ADDRESS`
+4. Updates `frontend/.env.local` with `NEXT_PUBLIC_FUTURES_CONTRACT_ADDRESS`
+
+**If you see HHE10402** (pending transactions need 5 confirmations): the script now **retries automatically** up to 4 times, waiting 90 seconds between attempts. You can leave it running, or run it again later.
+
+After a successful run, restart backend and frontend.
+
 ## Notes
 
 - Make sure your wallet has enough Sepolia ETH for gas fees
