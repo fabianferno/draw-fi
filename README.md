@@ -1,82 +1,549 @@
 # Draw-Fi
 
-**Draw your futures.** A gamified futures trading platform where users predict token price movements by drawing curves on a chart instead of placing traditional orders. Turn your market intuition into entertainment finance.
+**Draw-Fi** is a gamified futures trading platform where users predict token price movements by **drawing curves on a chart** instead of placing traditional orders. It's a 1–5 minute prediction game with directional accuracy-based PnL calculation.
 
-## What It Does
+**Core Innovation**: Users draw their price predictions as freehand curves, which are sampled into 60 price points and stored in EigenDA. When the position expires (after 60 seconds per position), PnL is calculated based on how many of the 59 directional changes (up/down/flat) the user predicted correctly — not on magnitude, just direction.
 
-- **Draw predictions** – Sketch a path on a live market chart representing your expected price trajectory over 1–5 minutes
-- **Open positions** – Your drawing is converted to 60 price points, stored in EigenDA, and committed on-chain
-- **Calculate PnL** – Profit/loss is based on **directional accuracy**: how many of your 59 step-by-step direction predictions (up/down/flat) match actual market movements
-- **Leaderboard** – Compete with other traders ranked by total PnL, win rate, and accuracy
-- **Yellow Network** – Fund positions off-chain (ytest.usd), settle on-chain. No gas for deposits; instant payouts via Yellow.
+**Key Integrations**:
 
-## Architecture
+- **EigenDA** — blob storage for both user predictions and actual price windows
+- **Yellow Network** — off-chain funding, gas-free position opening via EIP-712 relayer, and settlement payouts
+
+---
+
+## System Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Bybit WebSocket │────▶│  Price Aggregator │────▶│    EigenDA      │
-│  (Live Prices)   │     │  (60 prices/min)  │     │  (Blob Storage) │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                          │
-                                                          ▼
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  User Draws     │────▶│ Prediction       │────▶│ PriceOracle     │
-│  Prediction     │     │ Service          │     │ (On-chain)      │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-        │
-        ▼
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  LineFutures    │◀────│ Position Closer  │◀────│ PNL Calculator  │
-│  (Positions)    │     │ (Cron every 10s) │     │ (Directional)   │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-
-Yellow Network:
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Yellow Ledger  │────▶│ Deposit Poller   │────▶│ Yellow Balances │
-│  (Incoming xfer)│     │ (every 15s)      │     │ (DB)            │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                          │
-User opens position ──▶ deduct balance ──▶ Relayer ──▶ LineFutures
-Position closes ──▶ Payout via Yellow transfer to user
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         DRAW-FI SYSTEM ARCHITECTURE                        │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  FRONTEND (Next.js 16 + React 19)                                         │
+│  ├─ Landing Page (hero, features, animations)                             │
+│  ├─ Predict Page (TradingChart + PatternDrawingBox canvas)                │
+│  ├─ History Page (open/closed positions)                                  │
+│  ├─ Leaderboard Page (user rankings)                                     │
+│  └─ Privy embedded wallet integration                                    │
+│                                                                            │
+│  ┌──────────────────────┐     ┌──────────────────────────┐                │
+│  │   PRICE PIPELINE     │     │  PREDICTION PIPELINE     │                │
+│  │  Bybit WebSocket     │     │  User draws curve        │                │
+│  │  → Price Ingester    │     │  → Sample to 60 points   │                │
+│  │  → Price Aggregator  │     │  → Upload to EigenDA     │                │
+│  │    (60 prices/min)   │     │  → Get commitment ID     │                │
+│  │  → EigenDA submit    │     │  → Store on-chain ref    │                │
+│  │  → PriceOracle store │     └──────────────────────────┘                │
+│  └──────────────────────┘                                                  │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────┐                  │
+│  │   FUTURES LIFECYCLE                                   │                  │
+│  │  1. User opens position via LineFutures contract      │                  │
+│  │  2. PositionCloser cron (every 10s) finds expired     │                  │
+│  │  3. Retrieves predictions + actual prices from EigenDA│                  │
+│  │  4. PNL Calculator computes directional accuracy      │                  │
+│  │  5. Settlement on-chain via LineFutures.closePosition │                  │
+│  │  6. Yellow Network payout (if Yellow-funded)          │                  │
+│  └──────────────────────────────────────────────────────┘                  │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────┐                  │
+│  │   YELLOW NETWORK INTEGRATION                          │                  │
+│  │  ├─ Yellow Deposit Poller (every 15s)                 │                  │
+│  │  ├─ Yellow Balance Database (off-chain ledger)        │                  │
+│  │  ├─ Yellow Relayer Service (EIP-712 meta-txns)        │                  │
+│  │  └─ Payout processor on position close                │                  │
+│  └──────────────────────────────────────────────────────┘                  │
+│                                                                            │
+│  ┌──────────────────────────────────┐                                      │
+│  │   DATA STORES                    │                                      │
+│  │  ├─ EigenDA (blob storage)       │                                      │
+│  │  ├─ PriceOracle (on-chain refs)  │                                      │
+│  │  ├─ LineFutures (on-chain state) │                                      │
+│  │  └─ SQLite (leaderboard/history) │                                      │
+│  └──────────────────────────────────┘                                      │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Project Structure
+---
 
-| Directory | Description |
-|-----------|-------------|
-| `frontend/` | Next.js 16 app – landing, predict, leaderboard, history, chart & drawing UI |
-| `backend/` | Node.js/Express – price oracle, EigenDA, prediction upload, position closing |
-| `contracts/` | Solidity (Hardhat) – LineFutures, PriceOracle |
+## Technology Stack
 
-## Key Components
+| Layer            | Technology                                                       |
+| ---------------- | ---------------------------------------------------------------- |
+| Smart Contracts  | Solidity ^0.8.28, Hardhat, Hardhat Ignition                     |
+| Backend          | Node.js, Express.js, TypeScript                                  |
+| Frontend         | Next.js 16 (App Router), React 19, TailwindCSS 4                |
+| Blockchain       | Ethereum Sepolia testnet                                         |
+| DA Layer         | EigenDA via HTTP proxy                                           |
+| Wallet           | Privy (embedded wallets, social login)                           |
+| Charting         | TradingView lightweight-charts                                   |
+| Animations       | Framer Motion, Three.js (3D backgrounds)                         |
+| Database         | SQLite with WAL mode (via better-sqlite3)                        |
+| Price Feed       | Bybit WebSocket (real-time tickers)                              |
+| Off-chain Settle | Yellow Network (ClearNode sandbox)                               |
+| Signatures       | EIP-712 typed data signing                                       |
+| State Management | TanStack Query (React Query)                                     |
+| Blockchain Libs  | ethers.js v6, viem v2                                            |
 
-### Smart Contracts
+---
 
-- **LineFutures** – Position lifecycle: `openPosition`, `batchOpenPositions`, `closePosition`. 60s per position, 1–2500x leverage, 2% fee on profits. Requires EigenDA commitment IDs for predictions and actual prices.
-- **PriceOracle** – Stores EigenDA commitment strings for 60-second price windows (minute-aligned).
+## Smart Contracts Deep Dive
 
-### Backend
+### LineFutures.sol — Position Lifecycle Management
 
-- **Price pipeline**: Bybit WebSocket → PriceAggregator (60 prices/min) → EigenDA → PriceOracle
-- **Prediction pipeline**: User uploads 60 predictions → EigenDA → LineFutures commitment
-- **Position closer**: Cron every 10s finds expired positions, fetches predictions + actual prices from EigenDA, computes PnL, closes on-chain
-- **Yellow integration**: Deposit poller (credits user balances from Yellow transfers), payout via Yellow on position close
+**Purpose**: Manages the full lifecycle of prediction positions — open, close, fee collection, and payouts.
 
-### Frontend
+**Key State**:
 
-- **TradingChart** – Live price chart (Bybit) with drawing overlay
-- **PatternDrawingBox** – Canvas to draw prediction curves, time horizon (1–5 min), amount, leverage
-- **Token pair selector** – BTC/USDT, ETH/USDT, AAVE/USDT, DOGE/USDT
-- **History page** – View open and closed positions with PnL, user stats, and position details
-- **Yellow Network** – Deposit ytest.usd via Yellow Network, open positions, settle on-chain, receive payouts in Yellow
+```solidity
+struct Position {
+    address user;
+    uint256 amount;                    // wei deposited
+    uint16 leverage;                   // 1x–2500x
+    uint256 openTimestamp;
+    string predictionCommitmentId;     // EigenDA commitment for user's 60-point prediction
+    bool isOpen;
+    int256 pnl;
+    string actualPriceCommitmentId;    // EigenDA commitment for actual 60-price window
+    uint256 closeTimestamp;
+}
+```
 
-## PnL Formula
+**Core Functions**:
 
-1. Compare 59 directional changes: predicted vs actual (up/down/flat)
-2. `accuracy = correctDirections / 59`
-3. `maxProfit = priceMovement × positionSize × leverage`
-4. `pnl = (2 × accuracy - 1) × maxProfit` — 50% = break-even, 100% = max profit, 0% = max loss
-5. 2% fee on profits only
+| Function                 | Description                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------- |
+| `openPosition()`        | Accepts ETH + leverage + prediction commitment ID. Min 0.001 ETH, max 2500x leverage.       |
+| `batchOpenPositions()`  | Opens 1–5 positions in a single tx with equal ETH split. Staggered timestamps (i × 60s).    |
+| `closePosition()`       | Called by PnL server only. Requires position expired. Deducts 2% fee on profits. Pays user.  |
+| `getClosablePositions()`| Returns array of position IDs where `block.timestamp >= openTimestamp + 60s` and still open.  |
+
+**Constants**:
+
+- `MIN_AMOUNT` = 0.001 ETH (10^15 wei)
+- `MAX_LEVERAGE` = 2500x
+- `POSITION_DURATION` = 60 seconds
+- `feePercentage` = 200 basis points (2% on profits only)
+
+### PriceOracle.sol — Price Window Commitment Storage
+
+**Purpose**: Stores EigenDA commitment strings for 60-second price windows, indexed by minute-boundary timestamps.
+
+**Key Functions**:
+
+| Function              | Description                                                           |
+| --------------------- | --------------------------------------------------------------------- |
+| `storeCommitment()`  | Stores EigenDA commitment for a given minute boundary. Submitter only. |
+| `getCommitment()`    | Retrieve commitment string for a specific window start timestamp.      |
+| `getLatestWindow()`  | Returns the most recent window timestamp.                              |
+| `getWindowsInRange()`| Query all windows within a time range.                                 |
+
+**Access Control**: Only the designated `submitter` address can write commitments. Anyone can read.
+
+---
+
+## Backend Architecture
+
+The backend is organized into distinct pipelines, each responsible for a part of the system.
+
+### 5.1 Price Pipeline
+
+```
+Bybit WebSocket → PriceIngester → PriceAggregator → EigenDA → PriceOracle
+```
+
+1. **PriceIngester** (`src/ingester/priceIngester.ts`)
+   - WebSocket connection to Bybit's public ticker stream (`tickers.BTCUSDT`)
+   - Emits `'price'` events with `{price, timestamp, source}`
+   - Auto-reconnect with exponential backoff (max 10 attempts)
+   - Heartbeat check every 10s (reconnects if no data for 30s)
+   - Supports dynamic ticker switching (BTC, ETH, AAVE, DOGE)
+
+2. **PriceAggregator** (`src/aggregator/priceAggregator.ts`)
+   - Accumulates prices into minute-aligned 60-second windows
+   - Produces exactly 60 data points per window (one per second)
+   - Gap-filling: backward fill from end, then forward fill from start
+   - Calculates TWAP and volatility (standard deviation) per window
+   - Emits `'windowReady'` event
+
+3. **EigenDASubmitter** (`src/eigenda/eigendaSubmitter.ts`)
+   - HTTP client to local EigenDA proxy (`http://127.0.0.1:3100`)
+   - Retry logic: 3 attempts with exponential backoff (5s → 10s → 20s)
+   - Converts data to JSON → bytes → binary submission
+   - Returns commitment as hex string with `0x` prefix
+
+4. **ContractStorage** (`src/contract/contractStorage.ts`)
+   - ethers.js wrapper for PriceOracle contract
+   - Submits price window commitments on-chain at each minute boundary
+
+5. **Orchestrator** (`src/orchestrator/orchestrator.ts`)
+   - Coordinates the entire price pipeline end-to-end
+   - Event-driven: listens to `windowReady` → EigenDA submit → PriceOracle store
+   - Window check interval every 5 seconds
+
+### 5.2 Futures/Position Pipeline
+
+1. **PredictionService** (`src/futures/predictionService.ts`)
+   - Accepts user-drawn prediction curves (exactly 60 numbers)
+   - Rate limiting: 10 requests per 60s per IP/address
+   - Validates: exactly 60 positive finite numbers
+   - Uploads to EigenDA, returns commitment ID
+
+2. **PositionService** (`src/futures/positionService.ts`)
+   - Retrieves position details with predictions + analytics
+   - Closes expired positions:
+     - Retrieve predictions from EigenDA
+     - Retrieve actual prices from PriceOracle → EigenDA
+     - Calculate PnL via PNLCalculator
+     - Call `LineFutures.closePosition()` on-chain
+     - Record in PositionDatabase (for leaderboard)
+     - Process Yellow payout if applicable
+
+3. **PositionCloser** (`src/futures/positionCloser.ts`)
+   - Cron job running every 10 seconds
+   - Calls `LineFutures.getClosablePositions()` to find expired positions
+   - 2-second delay between closing each position
+   - Retry queue: failed positions retry up to 5 times
+   - Skip list: positions permanently skipped (e.g., EigenDA data loss)
+
+### 5.3 Position Database (SQLite)
+
+```sql
+CREATE TABLE closed_positions (
+    id INTEGER PRIMARY KEY,
+    position_id INTEGER UNIQUE NOT NULL,
+    user_address TEXT NOT NULL,
+    amount TEXT,
+    leverage INTEGER,
+    open_timestamp INTEGER NOT NULL,
+    close_timestamp INTEGER NOT NULL,
+    pnl TEXT,
+    prediction_commitment_id TEXT,
+    actual_price_commitment_id TEXT,
+    tx_hash TEXT,
+    accuracy REAL,
+    correct_directions INTEGER,
+    total_directions INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Indexed on `user_address`, `open_timestamp`, `close_timestamp` for fast leaderboard queries.
+
+### 5.4 API Endpoints
+
+**Health & Data**:
+
+| Endpoint                  | Method | Description                   |
+| ------------------------- | ------ | ----------------------------- |
+| `/api/health`            | GET    | System status                 |
+| `/api/latest`            | GET    | Latest price window           |
+| `/api/history`           | GET    | Price history (start/end)     |
+| `/api/stats`             | GET    | Statistics                    |
+| `/api/metrics`           | GET    | Detailed system metrics       |
+
+**Futures**:
+
+| Endpoint                            | Method | Description                      |
+| ----------------------------------- | ------ | -------------------------------- |
+| `/api/predictions/upload`          | POST   | Upload prediction → EigenDA      |
+| `/api/predictions/:commitmentId`   | GET    | Retrieve prediction data         |
+| `/api/position/:positionId`        | GET    | Full position details            |
+| `/api/positions/user/:address`     | GET    | User's positions                 |
+| `/api/positions/open`              | GET    | All open positions               |
+| `/api/positions/closed`            | GET    | Closed positions                 |
+| `/api/leaderboard`                 | GET    | Rankings (PnL/accuracy/winrate)  |
+| `/api/leaderboard/user/:address`   | GET    | User stats                       |
+| `/api/admin/close-expired`         | POST   | Manually close expired (admin)   |
+
+**Yellow Network**:
+
+| Endpoint                             | Method | Description                         |
+| ------------------------------------ | ------ | ----------------------------------- |
+| `/api/yellow/deposit-address`       | GET    | Where users send Yellow funds       |
+| `/api/yellow/deposit-balance/:addr` | GET    | User's credited balance             |
+| `/api/yellow/balance/:addr`         | GET    | Yellow Ledger balance               |
+| `/api/yellow/faucet`                | POST   | Request test tokens                 |
+| `/api/yellow/open-with-balance`     | POST   | Open position via EIP-712 signature |
+| `/api/yellow/config`                | GET    | Yellow network config               |
+
+---
+
+## Frontend Architecture
+
+### Pages
+
+1. **Landing Page** (`app/page.tsx`) — Hero section with "Draw your futures" tagline, feature showcase with Framer Motion animations, Nyan Cat easter egg, CTA to Predict page.
+
+2. **Predict Page** (`app/predict/page.tsx`) — Main trading interface:
+   - **TokenPairSelector**: Choose BTC/USDT, ETH/USDT, AAVE/USDT, DOGE/USDT
+   - **TradingChart**: Real-time price chart via lightweight-charts
+   - **PatternDrawingBox**: Canvas for drawing predictions (left-to-right only, neon cyan glow)
+   - **BottomControls**: Amount slider (ytest.usd), leverage slider (1–2500x), submit/cancel
+   - Time horizon: 1–5 minutes (offset)
+   - Yellow faucet integration for sandbox testing
+   - Onboarding tour (NextStep library)
+
+3. **History Page** (`app/history/`) — View all user positions (open/closed) with details: position ID, token pair, amount, leverage, PnL, accuracy, timestamps.
+
+4. **Leaderboard Page** (`app/leaderboard/`) — Global rankings by PnL, win rate, accuracy. User profiles with aggregated stats.
+
+### Key Components
+
+- **TradingChart.tsx** — lightweight-charts integration, real-time price rendering
+- **PatternDrawingBox.tsx** — HTML5 Canvas drawing with mouse/touch, samples curve to 60 points
+- **PredictionOverlay.tsx** — Shows drawn prediction overlaid on the price chart
+- **NyanCat.tsx** — 3D Nyan Cat animation (Three.js)
+- **ColorBlends.tsx** — Shader gradient background (Three.js)
+- **SlotMachineLever.tsx** — Fun submit button animation
+
+### Custom Hooks
+
+- `usePredictionDrawing` — Drawing state (points, canvas operations)
+- `usePriceData` — Fetch price data from backend
+- `usePrivyWallet` — Wallet connection and signer via Privy
+- `useYellowFaucet` — Request faucet tokens
+- `useYellowDeposit` — Track Yellow balance
+- `useTokenPair` — Global token pair context
+
+---
+
+## Core Innovation: Directional Accuracy PnL
+
+This is the heart of Draw-Fi's game mechanics. Instead of traditional P&L based on entry/exit price difference, we use **directional accuracy** across the entire curve.
+
+### The Formula
+
+```
+Step 1: Extract directions
+  For i = 0 to 58:
+    predictedDirection[i] = sign(predictions[i+1] - predictions[i])   // +1, -1, or 0
+    actualDirection[i]    = sign(actualPrices[i+1] - actualPrices[i]) // +1, -1, or 0
+
+Step 2: Count correct predictions
+  correctDirections = count where predictedDirection[i] == actualDirection[i]
+  totalDirections = 59
+
+Step 3: Calculate accuracy
+  accuracy = correctDirections / 59
+
+Step 4: Calculate max profit potential
+  priceMovement = |actualPrices[59] - actualPrices[0]|
+  positionSize  = amount / actualPrices[0]
+  maxProfit     = priceMovement × positionSize × leverage
+
+Step 5: Calculate PnL
+  pnl = (2 × accuracy - 1) × maxProfit
+
+Step 6: Apply fee (only on profits)
+  if pnl > 0: fee = pnl × 0.02 (2%)
+  finalAmount = amount + pnl - fee
+```
+
+### Key Properties
+
+| Accuracy | Outcome          | Interpretation                          |
+| -------- | ---------------- | --------------------------------------- |
+| 100%     | Max profit       | Every second's direction correctly predicted |
+| 75%      | Half max profit  | Strong prediction skill                 |
+| 50%      | Break-even       | Random chance baseline                  |
+| 25%      | Half max loss    | Mostly wrong                            |
+| 0%       | Max loss         | Every direction predicted incorrectly   |
+
+This creates elegant game dynamics:
+- **50% accuracy = break-even** (equivalent to random guessing)
+- The formula `(2 × accuracy - 1)` linearly maps [0, 1] accuracy to [-1, +1] PnL multiplier
+- Leverage amplifies both gains and losses proportionally
+- Only directional accuracy matters, not magnitude — preventing trivial strategies
+
+---
+
+## EigenDA Integration
+
+### Why EigenDA?
+
+Storing 60 price points directly on-chain per position would be prohibitively expensive. EigenDA provides cheap blob storage with on-chain commitment references for verification.
+
+### Two-Way Usage
+
+**1. Price Windows (Backend → EigenDA → PriceOracle)**
+
+```
+Every 60 seconds:
+  PriceAggregator produces 60-price window
+  → JSON encode → bytes → POST to EigenDA proxy (/put)
+  → Receive commitment hex string
+  → Store commitment in PriceOracle contract (indexed by minute timestamp)
+```
+
+**2. User Predictions (Frontend → Backend → EigenDA)**
+
+```
+User draws curve:
+  Frontend samples 60 points from drawing
+  → POST /api/predictions/upload (array of 60 numbers)
+  → Backend validates & uploads to EigenDA
+  → Returns commitment ID to frontend
+  → Frontend passes commitment to LineFutures.openPosition()
+```
+
+### Verification Flow
+
+At position close time:
+1. Retrieve prediction commitment from LineFutures position data
+2. Retrieve actual price commitment from PriceOracle (by minute-aligned timestamp)
+3. Fetch both blobs from EigenDA using commitments
+4. Decode JSON → 60-number arrays
+5. Run PNL calculation on the two arrays
+
+### EigenDA Proxy
+
+```bash
+docker run --rm -p 3100:3100 \
+  ghcr.io/layr-labs/eigenda-proxy:latest \
+  --memstore.enabled --port 3100
+```
+
+- `PUT /put` — Submit blob, returns commitment
+- `GET /get/{commitment}` — Retrieve blob by commitment
+- Retry logic with exponential backoff handles transient failures
+- Fallback handling for memstore data loss (HTTP 500 "payload not found")
+
+---
+
+## Yellow Network Integration
+
+### Architecture
+
+Yellow Network enables **gas-free position opening** for users through an off-chain balance + relayer pattern.
+
+```
+┌─────────────┐    deposit    ┌──────────────────┐
+│  User Wallet │────────────→│  Yellow ClearNode  │
+│  (Yellow)    │              │  (sandbox)         │
+└─────────────┘              └──────────┬─────────┘
+                                        │ poll (15s)
+                              ┌─────────▼──────────┐
+                              │ YellowDepositPoller │
+                              │ → credit balance    │
+                              └─────────┬──────────┘
+                                        │
+                              ┌─────────▼──────────┐
+                              │ YellowBalanceDB     │
+                              │ (off-chain ledger)  │
+                              └─────────┬──────────┘
+                                        │
+User signs EIP-712 ──────────→ RelayerService
+                              │ verifies signature  │
+                              │ debits balance      │
+                              │ opens on-chain pos  │
+                              └─────────┬──────────┘
+                                        │
+                              ┌─────────▼──────────┐
+                              │ LineFutures contract │
+                              │ (relayer pays gas)   │
+                              └─────────┬──────────┘
+                                        │
+                              On close: YellowService
+                              processes payout back
+                              to user's Yellow balance
+```
+
+### Key Components
+
+1. **YellowDepositPoller** — Polls Yellow ClearNode WebSocket every 15s for incoming transfers, credits user's off-chain balance.
+
+2. **YellowBalanceDatabase** — In-memory ledger tracking user balances in `ytest.usd` (6 decimals). Conversion: 1 ETH = 100 ytest.usd (configurable).
+
+3. **RelayerService** — Accepts EIP-712 signed messages from users. Verifies signature, opens position on-chain using relayer's ETH. Maps `positionId → userAddress` for payout routing.
+
+4. **YellowService** — Orchestrates faucet requests, balance-based position opening, and payout processing on position close.
+
+### EIP-712 Signature Schema
+
+```
+{
+  userAddress: address,
+  amount: uint256,
+  leverage: uint16,
+  commitmentId: string,
+  nonce: uint256,
+  deadline: uint256
+}
+```
+
+Users sign this typed data to authorize a position opening without paying gas themselves.
+
+---
+
+## Data Flow Walkthroughs
+
+### Flow 1: Opening a Position (Direct ETH)
+
+```
+1. User draws prediction curve on PatternDrawingBox canvas
+2. Frontend calls samplePredictionPoints(curve) → 60 price values
+3. Frontend POST /api/predictions/upload → Backend PredictionService
+   - Validates exactly 60 positive finite numbers
+   - Uploads to EigenDA → receives commitment ID
+4. Frontend calls LineFutures.openPosition(leverage, commitmentId) {value: amount}
+5. Contract creates Position struct, emits PositionOpened event
+6. Position is now live — 60-second countdown begins
+```
+
+### Flow 2: Opening a Position (Yellow Balance, Gas-Free)
+
+```
+1. User has ytest.usd balance (from Yellow deposits or faucet)
+2. User draws prediction → uploads to EigenDA → gets commitment ID
+3. User signs EIP-712 message: {address, amount, leverage, commitmentId, nonce, deadline}
+4. Frontend POST /api/yellow/open-with-balance with signature
+5. Backend RelayerService:
+   - Verifies EIP-712 signature against user address
+   - Debits ytest.usd from user's off-chain balance
+   - Relayer wallet calls LineFutures.openPosition() with relayer's ETH
+6. Backend maps positionId → userAddress for payout routing
+7. Position is now live — user paid zero gas
+```
+
+### Flow 3: Position Settlement (Auto-Close)
+
+```
+1. PositionCloser cron runs every 10 seconds
+2. Calls LineFutures.getClosablePositions()
+   → Returns position IDs where block.timestamp ≥ openTimestamp + 60s
+3. For each expired position:
+   a. Read position data from contract (predictionCommitmentId, openTimestamp)
+   b. Fetch prediction blob from EigenDA → decode 60 numbers
+   c. Compute minute-aligned window: openTimestamp rounded to minute boundary
+   d. Fetch actual price commitment from PriceOracle
+   e. Fetch actual price blob from EigenDA → decode 60 numbers
+   f. PNLCalculator.calculatePNL(predictions, actualPrices, amount, leverage, 200bps)
+   g. Call LineFutures.closePosition(positionId, pnl, actualPriceCommitmentId)
+   h. Contract transfers (amount + pnl - fee) to user
+   i. Record in SQLite closed_positions table
+   j. If Yellow-funded: YellowService.processYellowPayout()
+      → Credit (amount + pnl - fee) in ytest.usd to user's balance
+4. Failed closures enter retry queue (max 5 retries)
+```
+
+### Flow 4: Real-Time Price Pipeline
+
+```
+1. PriceIngester connects to Bybit WebSocket (wss://stream.bybit.com)
+   → Subscribes to tickers.BTCUSDT
+   → Receives ~10 price updates per second
+2. PriceAggregator accumulates prices per second
+   → At minute boundary: produces 60-price window
+   → Gap-fills missing seconds (backward fill, then forward fill)
+   → Emits 'windowReady' event
+3. Orchestrator receives event:
+   → Uploads 60-price array to EigenDA → commitment
+   → Calls PriceOracle.storeCommitment(windowTimestamp, commitment)
+4. Commitment now available for position closing reference
+```
+
+
+
 
 ## Getting Started
 
@@ -132,32 +599,6 @@ npx hardhat ignition deploy ignition/modules/LineFutures.ts --network sepolia
 ```
 
 See `contracts/DEPLOY.md` and `contracts/DEPLOYMENT.md` for details.
-
-## API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/health` | Health check |
-| `GET /api/latest` | Latest price window |
-| `GET /api/history` | Price history (start, end params) |
-| `POST /api/predictions/upload` | Upload user predictions → EigenDA |
-| `GET /api/predictions/:commitmentId` | Retrieve prediction from EigenDA |
-| `GET /api/positions/open` | Open positions |
-| `GET /api/positions/closed` | Closed positions (limit, offset, user) |
-| `GET /api/positions/user/:address` | User positions |
-| `GET /api/leaderboard` | Leaderboard (limit, offset, sort) |
-| `GET /api/leaderboard/user/:address` | User stats |
-| `POST /api/admin/close-expired` | Close expired positions (requires `x-api-key`) |
-
-### Yellow Network
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/yellow/deposit-address` | Draw-Fi deposit address for Yellow transfers |
-| `GET /api/yellow/deposit-balance/:address` | User's credited Yellow balance |
-| `POST /api/yellow/open-with-balance` | Open position using Yellow balance (EIP-712 signed) |
-| `POST /api/yellow/faucet` | Request test tokens from Yellow Sandbox |
-| `GET /api/yellow/balance/:address` | Yellow ledger balance |
 
 ## License
 
