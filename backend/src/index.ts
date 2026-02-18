@@ -1,6 +1,6 @@
 import { PriceIngester } from './ingester/priceIngester.js';
 import { PriceAggregator } from './aggregator/priceAggregator.js';
-import { EigenDASubmitter } from './eigenda/eigendaSubmitter.js';
+import { MongoDBStorage } from './storage/mongoStorage.js';
 import { ContractStorage } from './contract/contractStorage.js';
 import { RetrievalService } from './retrieval/retrievalService.js';
 import { Orchestrator } from './orchestrator/orchestrator.js';
@@ -24,7 +24,7 @@ import config from './config/config.js';
 class MNTPriceOracleApp {
   private ingester: PriceIngester;
   private aggregator: PriceAggregator;
-  private eigenDASubmitter: EigenDASubmitter;
+  private mongoStorage: MongoDBStorage;
   private contractStorage: ContractStorage;
   private retrievalService: RetrievalService;
   private orchestrator: Orchestrator;
@@ -51,18 +51,18 @@ class MNTPriceOracleApp {
     // Initialize oracle components
     this.ingester = new PriceIngester(config.defaultPriceSymbol);
     this.aggregator = new PriceAggregator();
-    this.eigenDASubmitter = new EigenDASubmitter();
+    this.mongoStorage = new MongoDBStorage();
     this.contractStorage = new ContractStorage();
 
     this.retrievalService = new RetrievalService(
       this.contractStorage,
-      this.eigenDASubmitter
+      this.mongoStorage
     );
 
     this.orchestrator = new Orchestrator(
       this.ingester,
       this.aggregator,
-      this.eigenDASubmitter,
+      this.mongoStorage,
       this.contractStorage
     );
 
@@ -83,7 +83,7 @@ class MNTPriceOracleApp {
       this.futuresContractStorage = new FuturesContractStorage();
 
       this.predictionService = new PredictionService(
-        this.eigenDASubmitter,
+        this.mongoStorage,
         config.rateLimitWindowMs,
         config.rateLimitMaxRequests
       );
@@ -98,7 +98,7 @@ class MNTPriceOracleApp {
         this.futuresContractStorage,
         this.predictionService,
         this.pnlCalculator,
-        this.eigenDASubmitter,
+        this.mongoStorage,
         this.contractStorage,
         this.retrievalService,
         this.positionDatabase,

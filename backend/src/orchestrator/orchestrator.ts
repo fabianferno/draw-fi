@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { PriceIngester } from '../ingester/priceIngester.js';
 import { PriceAggregator } from '../aggregator/priceAggregator.js';
-import { EigenDASubmitter } from '../eigenda/eigendaSubmitter.js';
+import { MongoDBStorage } from '../storage/mongoStorage.js';
 import { ContractStorage } from '../contract/contractStorage.js';
 import { PriceWindowPayload } from '../types/index.js';
 import logger from '../utils/logger.js';
@@ -9,7 +9,7 @@ import logger from '../utils/logger.js';
 export class Orchestrator extends EventEmitter {
   private ingester: PriceIngester;
   private aggregator: PriceAggregator;
-  private eigenDASubmitter: EigenDASubmitter;
+  private mongoStorage: MongoDBStorage;
   private contractStorage: ContractStorage;
   private isRunning = false;
   private windowCheckInterval: NodeJS.Timeout | null = null;
@@ -17,13 +17,13 @@ export class Orchestrator extends EventEmitter {
   constructor(
     ingester: PriceIngester,
     aggregator: PriceAggregator,
-    eigenDASubmitter: EigenDASubmitter,
+    mongoStorage: MongoDBStorage,
     contractStorage: ContractStorage
   ) {
     super();
     this.ingester = ingester;
     this.aggregator = aggregator;
-    this.eigenDASubmitter = eigenDASubmitter;
+    this.mongoStorage = mongoStorage;
     this.contractStorage = contractStorage;
 
     this.setupEventHandlers();
@@ -159,11 +159,11 @@ export class Orchestrator extends EventEmitter {
     });
 
     try {
-      // Step 1: Submit to EigenDA
-      logger.info('Submitting to EigenDA', { windowStart: payload.windowStart });
-      const commitment = await this.eigenDASubmitter.submitPayload(payload);
+      // Step 1: Submit to MongoDB
+      logger.info('Submitting to MongoDB', { windowStart: payload.windowStart });
+      const commitment = await this.mongoStorage.submitPayload(payload);
 
-      this.emit('eigenDASubmitted', {
+      this.emit('dataStored', {
         windowStart: payload.windowStart,
         commitment: commitment.commitment
       });

@@ -56,7 +56,7 @@ export async function uploadSampledPredictionPoints(options: {
   }
 
   // Sample and normalize points before upload so we always send exactly
-  // desiredCount predictions (default 60) per EigenDA commitment.
+  // desiredCount predictions (default 60) per storage commitment.
   const sampledPoints = samplePredictionPoints(points, desiredCount);
   const predictions = sampledPoints.map((p) => p.y + 1);
   console.log('predictions:', predictions);

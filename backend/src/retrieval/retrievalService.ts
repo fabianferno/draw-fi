@@ -1,19 +1,19 @@
 import { PriceWindowPayload, LiquidationRequest, LiquidationResult } from '../types/index.js';
 import { ContractStorage } from '../contract/contractStorage.js';
-import { EigenDASubmitter } from '../eigenda/eigendaSubmitter.js';
+import { MongoDBStorage } from '../storage/mongoStorage.js';
 import { PriceAggregator } from '../aggregator/priceAggregator.js';
 import logger from '../utils/logger.js';
 
 export class RetrievalService {
   private contractStorage: ContractStorage;
-  private eigenDASubmitter: EigenDASubmitter;
+  private mongoStorage: MongoDBStorage;
 
   constructor(
     contractStorage: ContractStorage,
-    eigenDASubmitter: EigenDASubmitter
+    mongoStorage: MongoDBStorage
   ) {
     this.contractStorage = contractStorage;
-    this.eigenDASubmitter = eigenDASubmitter;
+    this.mongoStorage = mongoStorage;
   }
 
   /**
@@ -50,8 +50,8 @@ export class RetrievalService {
         return null;
       }
 
-      // Retrieve data from EigenDA
-      const payload = await this.eigenDASubmitter.retrieveData(commitment);
+      // Retrieve data from MongoDB
+      const payload = await this.mongoStorage.retrieveData(commitment);
 
       logger.info('Window retrieved successfully', {
         windowStart,

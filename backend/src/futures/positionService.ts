@@ -1,7 +1,7 @@
 import { FuturesContractStorage, Position } from '../contract/futuresContractStorage.js';
 import { PredictionService } from './predictionService.js';
 import { PNLCalculator, PNLResult } from '../pnl/pnlCalculator.js';
-import { EigenDASubmitter } from '../eigenda/eigendaSubmitter.js';
+import { MongoDBStorage } from '../storage/mongoStorage.js';
 import { ContractStorage } from '../contract/contractStorage.js';
 import { RetrievalService } from '../retrieval/retrievalService.js';
 import { PositionDatabase } from '../database/positionDatabase.js';
@@ -58,7 +58,7 @@ export class PositionService {
   private futuresContract: FuturesContractStorage;
   private predictionService: PredictionService;
   private pnlCalculator: PNLCalculator;
-  private eigenDASubmitter: EigenDASubmitter;
+  private mongoStorage: MongoDBStorage;
   private oracleContract: ContractStorage;
   private retrievalService: RetrievalService;
   private positionDatabase?: PositionDatabase;
@@ -68,7 +68,7 @@ export class PositionService {
     futuresContract: FuturesContractStorage,
     predictionService: PredictionService,
     pnlCalculator: PNLCalculator,
-    eigenDASubmitter: EigenDASubmitter,
+    mongoStorage: MongoDBStorage,
     oracleContract: ContractStorage,
     retrievalService: RetrievalService,
     positionDatabase?: PositionDatabase,
@@ -77,7 +77,7 @@ export class PositionService {
     this.futuresContract = futuresContract;
     this.predictionService = predictionService;
     this.pnlCalculator = pnlCalculator;
-    this.eigenDASubmitter = eigenDASubmitter;
+    this.mongoStorage = mongoStorage;
     this.oracleContract = oracleContract;
     this.retrievalService = retrievalService;
     this.positionDatabase = positionDatabase;
@@ -136,7 +136,7 @@ export class PositionService {
       if (includeAnalytics && !position.isOpen && position.actualPriceCommitmentId) {
         try {
           // Get actual prices from oracle
-          const actualPriceData = await this.eigenDASubmitter.retrieveData(
+          const actualPriceData = await this.mongoStorage.retrieveData(
             position.actualPriceCommitmentId
           );
           details.actualPrices = actualPriceData.prices;
@@ -232,7 +232,7 @@ export class PositionService {
         throw new Error(`Position cannot be closed yet. ${remaining} seconds remaining`);
       }
 
-      // Step 3: Retrieve user predictions from EigenDA
+      // Step 3: Retrieve user predictions from MongoDB
       logger.info('Retrieving user predictions', {
         positionId,
         commitmentId: position.predictionCommitmentId

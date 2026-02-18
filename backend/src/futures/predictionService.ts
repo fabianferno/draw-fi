@@ -1,4 +1,4 @@
-import { EigenDASubmitter } from '../eigenda/eigendaSubmitter.js';
+import { MongoDBStorage } from '../storage/mongoStorage.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -22,7 +22,7 @@ export interface PredictionUploadResponse {
 }
 
 /**
- * Prediction blob structure for EigenDA
+ * Prediction blob structure for MongoDB storage
  */
 interface PredictionBlob {
   type: string;
@@ -89,18 +89,18 @@ class RateLimiter {
 
 /**
  * Prediction Service
- * Handles uploading user predictions to EigenDA with rate limiting
+ * Handles uploading user predictions to MongoDB with rate limiting
  */
 export class PredictionService {
-  private eigenDASubmitter: EigenDASubmitter;
+  private mongoStorage: MongoDBStorage;
   private rateLimiter: RateLimiter;
 
   constructor(
-    eigenDASubmitter: EigenDASubmitter,
+    mongoStorage: MongoDBStorage,
     rateLimitWindowMs: number = 60000,  // 1 minute
     rateLimitMaxRequests: number = 10    // 10 requests per minute
   ) {
-    this.eigenDASubmitter = eigenDASubmitter;
+    this.mongoStorage = mongoStorage;
     this.rateLimiter = new RateLimiter(rateLimitWindowMs, rateLimitMaxRequests);
 
     logger.info('PredictionService initialized', {
@@ -110,7 +110,7 @@ export class PredictionService {
   }
 
   /**
-   * Upload predictions to EigenDA
+   * Upload predictions to MongoDB
    */
   public async uploadPredictions(
     request: PredictionUploadRequest,
@@ -147,8 +147,8 @@ export class PredictionService {
         uploadTimestamp: request.timestamp || Date.now()
       };
 
-      // Upload to EigenDA
-      const commitment = await this.eigenDASubmitter.submitData(blob);
+      // Upload to MongoDB
+      const commitment = await this.mongoStorage.submitData(blob);
 
       logger.info('Predictions uploaded successfully', {
         userAddress: request.userAddress,
@@ -172,18 +172,18 @@ export class PredictionService {
   }
 
   /**
-   * Retrieve predictions from EigenDA
-   * @param commitmentId The full EigenDA commitment string
+   * Retrieve predictions from MongoDB
+   * @param commitmentId The full commitment string (MongoDB ObjectId)
    */
   public async retrievePredictions(commitmentId: string): Promise<PredictionBlob> {
     try {
       logger.info('Retrieving predictions', { commitmentId });
 
-      const data = await this.eigenDASubmitter.retrieveData(commitmentId) as any;
+      const data = await this.mongoStorage.retrieveData(commitmentId) as any;
 
-      // EigenDA returned null (e.g. 404 or proxy "payload not found" after memstore restart)
+      // MongoDB returned null (data not found)
       if (data == null) {
-        throw new Error('Predictions not found in EigenDA (data may be unavailable, e.g. proxy restarted with memstore)');
+        throw new Error('Predictions not found in MongoDB (data may be unavailable)');
       }
 
       // Validate retrieved data

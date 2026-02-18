@@ -2,11 +2,11 @@
 
 **Draw-Fi** is a gamified futures trading platform where users predict token price movements by **drawing curves on a chart** instead of placing traditional orders. It's a 1–5 minute prediction game with directional accuracy-based PnL calculation.
 
-**Core Innovation**: Users draw their price predictions as freehand curves, which are sampled into 60 price points and stored in EigenDA. When the position expires (after 60 seconds per position), PnL is calculated based on how many of the 59 directional changes (up/down/flat) the user predicted correctly — not on magnitude, just direction.
+**Core Innovation**: Users draw their price predictions as freehand curves, which are sampled into 60 price points and stored in MongoDB. When the position expires (after 60 seconds per position), PnL is calculated based on how many of the 59 directional changes (up/down/flat) the user predicted correctly — not on magnitude, just direction.
 
 **Key Integrations**:
 
-- **EigenDA** — blob storage for both user predictions and actual price windows
+- **MongoDB Atlas** — cloud database for storing user predictions and actual price windows
 - **Yellow Network** — off-chain funding, gas-free position opening via EIP-712 relayer, and settlement payouts
 
 ---
@@ -29,9 +29,9 @@
 │  │   PRICE PIPELINE     │     │  PREDICTION PIPELINE     │                │
 │  │  Bybit WebSocket     │     │  User draws curve        │                │
 │  │  → Price Ingester    │     │  → Sample to 60 points   │                │
-│  │  → Price Aggregator  │     │  → Upload to EigenDA     │                │
+│  │  → Price Aggregator  │     │  → Upload to MongoDB     │                │
 │  │    (60 prices/min)   │     │  → Get commitment ID     │                │
-│  │  → EigenDA submit    │     │  → Store on-chain ref    │                │
+│  │  → MongoDB submit    │     │  → Store on-chain ref    │                │
 │  │  → PriceOracle store │     └──────────────────────────┘                │
 │  └──────────────────────┘                                                  │
 │                                                                            │
@@ -39,7 +39,7 @@
 │  │   FUTURES LIFECYCLE                                   │                  │
 │  │  1. User opens position via LineFutures contract      │                  │
 │  │  2. PositionCloser cron (every 10s) finds expired     │                  │
-│  │  3. Retrieves predictions + actual prices from EigenDA│                  │
+│  │  3. Retrieves predictions + actual prices from MongoDB│                  │
 │  │  4. PNL Calculator computes directional accuracy      │                  │
 │  │  5. Settlement on-chain via LineFutures.closePosition │                  │
 │  │  6. Yellow Network payout (if Yellow-funded)          │                  │
@@ -55,7 +55,7 @@
 │                                                                            │
 │  ┌──────────────────────────────────┐                                      │
 │  │   DATA STORES                    │                                      │
-│  │  ├─ EigenDA (blob storage)       │                                      │
+│  │  ├─ MongoDB (predictions/prices) │                                      │
 │  │  ├─ PriceOracle (on-chain refs)  │                                      │
 │  │  ├─ LineFutures (on-chain state) │                                      │
 │  │  └─ SQLite (leaderboard/history) │                                      │
@@ -73,7 +73,7 @@
 | Backend          | Node.js, Express.js, TypeScript                                  |
 | Frontend         | Next.js 16 (App Router), React 19, TailwindCSS 4                |
 | Blockchain       | Ethereum Sepolia testnet                                         |
-| DA Layer         | EigenDA via HTTP proxy                                           |
+| Database         | MongoDB Atlas (cloud), SQLite (local)                            |
 | Wallet           | Privy (embedded wallets, social login)                           |
 | Charting         | TradingView lightweight-charts                                   |
 | Animations       | Framer Motion, Three.js (3D backgrounds)                         |
@@ -100,10 +100,10 @@ struct Position {
     uint256 amount;                    // wei deposited
     uint16 leverage;                   // 1x–2500x
     uint256 openTimestamp;
-    string predictionCommitmentId;     // EigenDA commitment for user's 60-point prediction
+    string predictionCommitmentId;     // MongoDB ObjectId for user's 60-point prediction
     bool isOpen;
     int256 pnl;
-    string actualPriceCommitmentId;    // EigenDA commitment for actual 60-price window
+    string actualPriceCommitmentId;    // MongoDB ObjectId for actual 60-price window
     uint256 closeTimestamp;
 }
 ```
@@ -126,13 +126,13 @@ struct Position {
 
 ### PriceOracle.sol — Price Window Commitment Storage
 
-**Purpose**: Stores EigenDA commitment strings for 60-second price windows, indexed by minute-boundary timestamps.
+**Purpose**: Stores commitment strings (MongoDB ObjectIds) for 60-second price windows, indexed by minute-boundary timestamps.
 
 **Key Functions**:
 
 | Function              | Description                                                           |
 | --------------------- | --------------------------------------------------------------------- |
-| `storeCommitment()`  | Stores EigenDA commitment for a given minute boundary. Submitter only. |
+| `storeCommitment()`  | Stores storage commitment for a given minute boundary. Submitter only. |
 | `getCommitment()`    | Retrieve commitment string for a specific window start timestamp.      |
 | `getLatestWindow()`  | Returns the most recent window timestamp.                              |
 | `getWindowsInRange()`| Query all windows within a time range.                                 |
@@ -148,7 +148,7 @@ The backend is organized into distinct pipelines, each responsible for a part of
 ### 5.1 Price Pipeline
 
 ```
-Bybit WebSocket → PriceIngester → PriceAggregator → EigenDA → PriceOracle
+Bybit WebSocket → PriceIngester → PriceAggregator → MongoDB → PriceOracle
 ```
 
 1. **PriceIngester** (`src/ingester/priceIngester.ts`)
@@ -165,11 +165,11 @@ Bybit WebSocket → PriceIngester → PriceAggregator → EigenDA → PriceOracl
    - Calculates TWAP and volatility (standard deviation) per window
    - Emits `'windowReady'` event
 
-3. **EigenDASubmitter** (`src/eigenda/eigendaSubmitter.ts`)
-   - HTTP client to local EigenDA proxy (`http://127.0.0.1:3100`)
+3. **MongoDBStorage** (`src/storage/mongoStorage.ts`)
+   - MongoDB client connected to Atlas cloud database
    - Retry logic: 3 attempts with exponential backoff (5s → 10s → 20s)
-   - Converts data to JSON → bytes → binary submission
-   - Returns commitment as hex string with `0x` prefix
+   - Stores data in collections: `price_windows` and `user_predictions`
+   - Returns MongoDB ObjectId as hex string with `0x` prefix
 
 4. **ContractStorage** (`src/contract/contractStorage.ts`)
    - ethers.js wrapper for PriceOracle contract
@@ -177,7 +177,7 @@ Bybit WebSocket → PriceIngester → PriceAggregator → EigenDA → PriceOracl
 
 5. **Orchestrator** (`src/orchestrator/orchestrator.ts`)
    - Coordinates the entire price pipeline end-to-end
-   - Event-driven: listens to `windowReady` → EigenDA submit → PriceOracle store
+   - Event-driven: listens to `windowReady` → MongoDB submit → PriceOracle store
    - Window check interval every 5 seconds
 
 ### 5.2 Futures/Position Pipeline
@@ -186,13 +186,13 @@ Bybit WebSocket → PriceIngester → PriceAggregator → EigenDA → PriceOracl
    - Accepts user-drawn prediction curves (exactly 60 numbers)
    - Rate limiting: 10 requests per 60s per IP/address
    - Validates: exactly 60 positive finite numbers
-   - Uploads to EigenDA, returns commitment ID
+   - Uploads to MongoDB, returns commitment ID (ObjectId)
 
 2. **PositionService** (`src/futures/positionService.ts`)
    - Retrieves position details with predictions + analytics
    - Closes expired positions:
-     - Retrieve predictions from EigenDA
-     - Retrieve actual prices from PriceOracle → EigenDA
+     - Retrieve predictions from MongoDB
+     - Retrieve actual prices from PriceOracle → MongoDB
      - Calculate PnL via PNLCalculator
      - Call `LineFutures.closePosition()` on-chain
      - Record in PositionDatabase (for leaderboard)
@@ -203,7 +203,7 @@ Bybit WebSocket → PriceIngester → PriceAggregator → EigenDA → PriceOracl
    - Calls `LineFutures.getClosablePositions()` to find expired positions
    - 2-second delay between closing each position
    - Retry queue: failed positions retry up to 5 times
-   - Skip list: positions permanently skipped (e.g., EigenDA data loss)
+   - Skip list: positions permanently skipped (e.g., data loss)
 
 ### 5.3 Position Database (SQLite)
 
@@ -245,7 +245,7 @@ Indexed on `user_address`, `open_timestamp`, `close_timestamp` for fast leaderbo
 
 | Endpoint                            | Method | Description                      |
 | ----------------------------------- | ------ | -------------------------------- |
-| `/api/predictions/upload`          | POST   | Upload prediction → EigenDA      |
+| `/api/predictions/upload`          | POST   | Upload prediction → MongoDB      |
 | `/api/predictions/:commitmentId`   | GET    | Retrieve prediction data         |
 | `/api/position/:positionId`        | GET    | Full position details            |
 | `/api/positions/user/:address`     | GET    | User's positions                 |
@@ -357,32 +357,32 @@ This creates elegant game dynamics:
 
 ---
 
-## EigenDA Integration
+## MongoDB Storage
 
-### Why EigenDA?
+### Why MongoDB?
 
-Storing 60 price points directly on-chain per position would be prohibitively expensive. EigenDA provides cheap blob storage with on-chain commitment references for verification.
+Storing 60 price points directly on-chain per position would be prohibitively expensive. MongoDB Atlas provides reliable cloud storage with on-chain commitment references (ObjectIds) for verification.
 
 ### Two-Way Usage
 
-**1. Price Windows (Backend → EigenDA → PriceOracle)**
+**1. Price Windows (Backend → MongoDB → PriceOracle)**
 
 ```
 Every 60 seconds:
   PriceAggregator produces 60-price window
-  → JSON encode → bytes → POST to EigenDA proxy (/put)
-  → Receive commitment hex string
+  → Insert document into MongoDB `price_windows` collection
+  → Receive ObjectId as hex string commitment
   → Store commitment in PriceOracle contract (indexed by minute timestamp)
 ```
 
-**2. User Predictions (Frontend → Backend → EigenDA)**
+**2. User Predictions (Frontend → Backend → MongoDB)**
 
 ```
 User draws curve:
   Frontend samples 60 points from drawing
   → POST /api/predictions/upload (array of 60 numbers)
-  → Backend validates & uploads to EigenDA
-  → Returns commitment ID to frontend
+  → Backend validates & uploads to MongoDB `user_predictions` collection
+  → Returns ObjectId commitment to frontend
   → Frontend passes commitment to LineFutures.openPosition()
 ```
 
@@ -391,22 +391,29 @@ User draws curve:
 At position close time:
 1. Retrieve prediction commitment from LineFutures position data
 2. Retrieve actual price commitment from PriceOracle (by minute-aligned timestamp)
-3. Fetch both blobs from EigenDA using commitments
-4. Decode JSON → 60-number arrays
+3. Fetch both documents from MongoDB using ObjectId commitments
+4. Extract 60-number arrays from documents
 5. Run PNL calculation on the two arrays
 
-### EigenDA Proxy
+### MongoDB Setup
 
-```bash
-docker run --rm -p 3100:3100 \
-  ghcr.io/layr-labs/eigenda-proxy:latest \
-  --memstore.enabled --port 3100
-```
+**MongoDB Atlas Cloud Setup:**
+1. Create free MongoDB Atlas account at https://www.mongodb.com/cloud/atlas
+2. Create M0 cluster (free tier)
+3. Create database named `drawfi`
+4. Get connection string: `mongodb+srv://username:password@cluster.mongodb.net/`
+5. Whitelist your server IP or use `0.0.0.0/0` for testing
+6. Set `MONGODB_URI` environment variable
 
-- `PUT /put` — Submit blob, returns commitment
-- `GET /get/{commitment}` — Retrieve blob by commitment
-- Retry logic with exponential backoff handles transient failures
-- Fallback handling for memstore data loss (HTTP 500 "payload not found")
+**Collections:**
+- `price_windows` — 60-second price windows with indexes on `windowStart` and `createdAt`
+- `user_predictions` — User prediction data with indexes on `userAddress` and `createdAt`
+
+**Benefits:**
+- Cloud-hosted with automatic backups
+- No data loss on restarts (persistent cloud storage)
+- Query capabilities by user, timestamp, etc.
+- Built-in monitoring and alerting
 
 ---
 
@@ -484,7 +491,7 @@ Users sign this typed data to authorize a position opening without paying gas th
 2. Frontend calls samplePredictionPoints(curve) → 60 price values
 3. Frontend POST /api/predictions/upload → Backend PredictionService
    - Validates exactly 60 positive finite numbers
-   - Uploads to EigenDA → receives commitment ID
+   - Uploads to MongoDB → receives commitment ID (ObjectId)
 4. Frontend calls LineFutures.openPosition(leverage, commitmentId) {value: amount}
 5. Contract creates Position struct, emits PositionOpened event
 6. Position is now live — 60-second countdown begins
@@ -494,7 +501,7 @@ Users sign this typed data to authorize a position opening without paying gas th
 
 ```
 1. User has ytest.usd balance (from Yellow deposits or faucet)
-2. User draws prediction → uploads to EigenDA → gets commitment ID
+2. User draws prediction → uploads to MongoDB → gets commitment ID (ObjectId)
 3. User signs EIP-712 message: {address, amount, leverage, commitmentId, nonce, deadline}
 4. Frontend POST /api/yellow/open-with-balance with signature
 5. Backend RelayerService:
@@ -513,10 +520,10 @@ Users sign this typed data to authorize a position opening without paying gas th
    → Returns position IDs where block.timestamp ≥ openTimestamp + 60s
 3. For each expired position:
    a. Read position data from contract (predictionCommitmentId, openTimestamp)
-   b. Fetch prediction blob from EigenDA → decode 60 numbers
+   b. Fetch prediction document from MongoDB using ObjectId → decode 60 numbers
    c. Compute minute-aligned window: openTimestamp rounded to minute boundary
    d. Fetch actual price commitment from PriceOracle
-   e. Fetch actual price blob from EigenDA → decode 60 numbers
+   e. Fetch actual price document from MongoDB using ObjectId → decode 60 numbers
    f. PNLCalculator.calculatePNL(predictions, actualPrices, amount, leverage, 200bps)
    g. Call LineFutures.closePosition(positionId, pnl, actualPriceCommitmentId)
    h. Contract transfers (amount + pnl - fee) to user
@@ -537,7 +544,7 @@ Users sign this typed data to authorize a position opening without paying gas th
    → Gap-fills missing seconds (backward fill, then forward fill)
    → Emits 'windowReady' event
 3. Orchestrator receives event:
-   → Uploads 60-price array to EigenDA → commitment
+   → Inserts 60-price document into MongoDB → ObjectId commitment
    → Calls PriceOracle.storeCommitment(windowTimestamp, commitment)
 4. Commitment now available for position closing reference
 ```
@@ -551,7 +558,7 @@ Users sign this typed data to authorize a position opening without paying gas th
 
 - Node.js 18+
 - pnpm
-- EigenDA proxy (or local node) for blob storage
+- MongoDB Atlas account (free tier available)
 - Sepolia ETH for deployments and transactions
 
 ### Environment
@@ -564,7 +571,8 @@ Copy `backend/env.example` to `backend/.env.local` and fill in values.
 ETHEREUM_SEPOLIA_PRIVATE_KEY=
 CONTRACT_ADDRESS=           # PriceOracle address
 FUTURES_CONTRACT_ADDRESS=   # LineFutures address
-EIGENDA_PROXY_URL=http://127.0.0.1:3100
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
+MONGODB_DATABASE=drawfi
 ADMIN_API_KEY=
 
 # Yellow Network (required for opening positions)
@@ -586,7 +594,7 @@ NEXT_PUBLIC_ETHEREUM_RPC_URL=   # optional, Sepolia RPC
 
 ### Run
 
-1. Start EigenDA proxy (e.g. port 3100) – see `EIGEN_DA_PROXY_SETUP.md` for Docker command
+1. Set up MongoDB Atlas cluster and get connection string
 2. Backend: `cd backend && pnpm dev` (port 3001)
 3. Frontend: `cd frontend && pnpm dev`
 

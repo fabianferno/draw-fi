@@ -21,7 +21,7 @@ export interface PriceEntry {
 }
 
 /**
- * 60-second price window payload for EigenDA
+ * 60-second price window payload for storage
  */
 export interface PriceWindowPayload {
   windowStart: number;
@@ -35,10 +35,10 @@ export interface PriceWindowPayload {
 }
 
 /**
- * EigenDA commitment response
+ * Storage commitment response (MongoDB ObjectId as hex string)
  */
 export interface EigenDACommitment {
-  commitment: string; // hex string
+  commitment: string; // hex string (MongoDB ObjectId)
   batchHeaderHash?: string;
   blobIndex?: number;
 }
@@ -50,8 +50,8 @@ export interface HealthMetrics {
   websocketConnected: boolean;
   lastPriceUpdate: number;
   bufferSize: number;
-  lastEigenDASubmission: number;
-  eigenDASuccessRate: number;
+  lastStorageSubmission: number;
+  storageSuccessRate: number;
   lastContractSubmission: number;
   contractSuccessRate: number;
   totalWindows: number;

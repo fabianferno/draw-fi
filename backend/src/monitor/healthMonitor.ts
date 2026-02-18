@@ -16,7 +16,7 @@ export class HealthMonitor extends EventEmitter {
   private contractStorage: ContractStorage;
   private monitorInterval: NodeJS.Timeout | null = null;
   private metrics: HealthMetrics;
-  private eigenDASubmissions: { success: number; total: number } = { success: 0, total: 0 };
+  private storageSubmissions: { success: number; total: number } = { success: 0, total: 0 };
   private contractSubmissions: { success: number; total: number } = { success: 0, total: 0 };
   private totalWindows = 0;
 
@@ -32,8 +32,8 @@ export class HealthMonitor extends EventEmitter {
       websocketConnected: false,
       lastPriceUpdate: 0,
       bufferSize: 0,
-      lastEigenDASubmission: 0,
-      eigenDASuccessRate: 100,
+      lastStorageSubmission: 0,
+      storageSuccessRate: 100,
       lastContractSubmission: 0,
       contractSuccessRate: 100,
       totalWindows: 0
@@ -82,11 +82,11 @@ export class HealthMonitor extends EventEmitter {
    * Setup event handlers for tracking metrics
    */
   private setupEventHandlers(): void {
-    // Track EigenDA submissions
-    this.orchestrator.on('eigenDASubmitted', () => {
-      this.eigenDASubmissions.success++;
-      this.eigenDASubmissions.total++;
-      this.metrics.lastEigenDASubmission = Date.now();
+    // Track storage submissions
+    this.orchestrator.on('dataStored', () => {
+      this.storageSubmissions.success++;
+      this.storageSubmissions.total++;
+      this.metrics.lastStorageSubmission = Date.now();
       this.updateSuccessRates();
     });
 
@@ -101,7 +101,7 @@ export class HealthMonitor extends EventEmitter {
 
     // Track failures
     this.orchestrator.on('windowProcessingError', (data) => {
-      this.eigenDASubmissions.total++;
+      this.storageSubmissions.total++;
       this.contractSubmissions.total++;
       this.updateSuccessRates();
       
@@ -143,9 +143,9 @@ export class HealthMonitor extends EventEmitter {
    * Update success rates
    */
   private updateSuccessRates(): void {
-    if (this.eigenDASubmissions.total > 0) {
-      this.metrics.eigenDASuccessRate = 
-        (this.eigenDASubmissions.success / this.eigenDASubmissions.total) * 100;
+    if (this.storageSubmissions.total > 0) {
+      this.metrics.storageSuccessRate = 
+        (this.storageSubmissions.success / this.storageSubmissions.total) * 100;
     }
 
     if (this.contractSubmissions.total > 0) {
@@ -182,12 +182,12 @@ export class HealthMonitor extends EventEmitter {
         message: `No price data tracked for over 1 minute`
       },
       {
-        name: 'EigenDA Low Success Rate',
+        name: 'Storage Low Success Rate',
         check: () => {
-          return this.eigenDASubmissions.total >= 3 && 
-                 this.metrics.eigenDASuccessRate < 90;
+          return this.storageSubmissions.total >= 3 && 
+                 this.metrics.storageSuccessRate < 90;
         },
-        message: `EigenDA success rate is ${this.metrics.eigenDASuccessRate.toFixed(1)}%`
+        message: `Storage success rate is ${this.metrics.storageSuccessRate.toFixed(1)}%`
       },
       {
         name: 'Contract Low Success Rate',
@@ -198,12 +198,12 @@ export class HealthMonitor extends EventEmitter {
         message: `Contract success rate is ${this.metrics.contractSuccessRate.toFixed(1)}%`
       },
       {
-        name: 'No Recent EigenDA Submission',
+        name: 'No Recent Storage Submission',
         check: () => {
-          const timeSinceSubmission = now - this.metrics.lastEigenDASubmission;
-          return this.metrics.lastEigenDASubmission > 0 && timeSinceSubmission > 300000; // 5 minutes
+          const timeSinceSubmission = now - this.metrics.lastStorageSubmission;
+          return this.metrics.lastStorageSubmission > 0 && timeSinceSubmission > 300000; // 5 minutes
         },
-        message: 'No EigenDA submission in the last 5 minutes'
+        message: 'No storage submission in the last 5 minutes'
       },
       {
         name: 'No Recent Contract Submission',
@@ -287,8 +287,8 @@ export class HealthMonitor extends EventEmitter {
       issues.push('No price updates in 30+ seconds');
     }
 
-    if (this.metrics.eigenDASuccessRate < 90 && this.eigenDASubmissions.total >= 3) {
-      issues.push(`Low EigenDA success rate: ${this.metrics.eigenDASuccessRate.toFixed(1)}%`);
+    if (this.metrics.storageSuccessRate < 90 && this.storageSubmissions.total >= 3) {
+      issues.push(`Low storage success rate: ${this.metrics.storageSuccessRate.toFixed(1)}%`);
     }
 
     if (this.metrics.contractSuccessRate < 90 && this.contractSubmissions.total >= 3) {

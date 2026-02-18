@@ -10,8 +10,8 @@ export interface Config {
   ethereumPrivateKey: string;
   contractAddress: string;
   futuresContractAddress: string;
-  eigendaProxyUrl: string;
-  eigendaCommitmentMode: string;
+  mongodbUri: string;
+  mongodbDatabase: string;
   port: number;
   apiHost: string;
   bybitWssUrl: string;
@@ -28,7 +28,7 @@ export interface Config {
   yellowEthToYtestRate: number;
   /** When true, faucet success also credits user's Draw-Fi balance (sandbox convenience - no separate transfer needed) */
   yellowFaucetAlsoCredit: boolean;
-  /** Position IDs to never attempt to close (e.g. after EigenDA memstore loss). Comma-separated, e.g. "4,5" */
+  /** Position IDs to never attempt to close (e.g. after data loss). Comma-separated, e.g. "4,5" */
   skipPositionIds: number[];
 }
 
@@ -54,8 +54,8 @@ export const config: Config = {
   ethereumPrivateKey: getEnvVar('ETHEREUM_SEPOLIA_PRIVATE_KEY'),
   contractAddress: getEnvVar('CONTRACT_ADDRESS'),
   futuresContractAddress: getEnvVar('FUTURES_CONTRACT_ADDRESS'),
-  eigendaProxyUrl: getOptionalEnvVar('EIGENDA_PROXY_URL', 'http://127.0.0.1:3100'),
-  eigendaCommitmentMode: getOptionalEnvVar('EIGENDA_COMMITMENT_MODE', 'standard'),
+  mongodbUri: getEnvVar('MONGODB_URI'),
+  mongodbDatabase: getOptionalEnvVar('MONGODB_DATABASE', 'drawfi'),
   port: parseInt(process.env.PORT || '3001', 10),
   apiHost: process.env.API_HOST || '0.0.0.0',
   bybitWssUrl: getOptionalEnvVar('BYBIT_WSS_URL', 'wss://stream.bybit.com/v5/public/spot'),
