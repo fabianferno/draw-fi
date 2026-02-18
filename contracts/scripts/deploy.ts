@@ -6,7 +6,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, '../../backend/.env.local') });
+dotenv.config({ path: join(__dirname, '../.env') });
 
 async function getWalletAddress(privateKey: string): Promise<string> {
   const wallet = new ethers.Wallet(privateKey);
@@ -14,23 +14,20 @@ async function getWalletAddress(privateKey: string): Promise<string> {
 }
 
 async function deploy() {
-  const privateKey = process.env.ETHEREUM_SEPOLIA_PRIVATE_KEY?.replace(/"/g, '');
+  const privateKey = process.env.ETHEREUM_PRIVATE_KEY?.replace(/"/g, '');
 
   if (!privateKey) {
-    throw new Error('ETHEREUM_SEPOLIA_PRIVATE_KEY not found in environment');
+    throw new Error('ETHEREUM_PRIVATE_KEY not found in environment');
   }
 
   const walletAddress = await getWalletAddress(privateKey);
   console.log(`\n📋 Deployment Configuration:`);
   console.log(`   Wallet Address: ${walletAddress}`);
-  console.log(`   Network: Ethereum Sepolia`);
-  console.log(`   RPC URL: ${process.env.ETHEREUM_RPC_URL || 'https://rpc.sepolia.org'}\n`);
+  console.log(`   Network: Base Mainnet`);
+  console.log(`   RPC URL: ${process.env.ETHEREUM_RPC_URL || 'https://mainnet.base.org'}\n`);
 
-  // Step 1: Deploy PriceOracle
-  console.log('🚀 Step 1: Deploying PriceOracle...');
-  const oracleDeployCmd = `npx hardhat ignition deploy --network sepolia ignition/modules/PriceOracle.ts --parameters '{"PriceOracleModule":{"submitterAddress":"${walletAddress}"}}' --reset`;
-
-  console.log(`   Running: ${oracleDeployCmd}\n`);
+  // Deploy LineFutures
+  console.log('🚀 Deploying LineFutures...');
   const execOpts = {
     encoding: 'utf-8' as const,
     cwd: join(__dirname, '..'),
@@ -41,19 +38,7 @@ async function deploy() {
       HARDHAT_IGNITION_CONFIRM_RESET: 'false',
     },
   };
-  const oracleOutput = execSync(oracleDeployCmd, execOpts);
-
-  // Extract oracle address from output
-  const oracleMatch = oracleOutput.match(/deployed to (0x[a-fA-F0-9]{40})/i);
-  if (!oracleMatch) {
-    throw new Error('Failed to extract oracle address from deployment output');
-  }
-  const oracleAddress = oracleMatch[1];
-  console.log(`   ✅ PriceOracle deployed to: ${oracleAddress}\n`);
-
-  // Step 2: Deploy LineFutures
-  console.log('🚀 Step 2: Deploying LineFutures...');
-  const futuresDeployCmd = `npx hardhat ignition deploy --network sepolia ignition/modules/LineFutures.ts --parameters '{"LineFuturesModule":{"pnlServerAddress":"${walletAddress}","priceOracleAddress":"${oracleAddress}"}}' --reset`;
+  const futuresDeployCmd = `npx hardhat ignition deploy --network base ignition/modules/LineFutures.ts --parameters '{"LineFuturesModule":{"pnlServerAddress":"${walletAddress}"}}' --reset`;
 
   console.log(`   Running: ${futuresDeployCmd}\n`);
   const futuresOutput = execSync(futuresDeployCmd, execOpts);
@@ -69,12 +54,9 @@ async function deploy() {
   // Summary
   console.log('\n✨ Deployment Complete!\n');
   console.log('📝 Update your backend/.env.local with:');
-  console.log(`   CONTRACT_ADDRESS=${oracleAddress}`);
-  console.log(`   FUTURES_CONTRACT_ADDRESS=${futuresAddress}`);
-  console.log(`   ORACLE_CONTRACT_ADDRESS=${oracleAddress}\n`);
+  console.log(`   FUTURES_CONTRACT_ADDRESS=${futuresAddress}\n`);
 
   return {
-    oracleAddress,
     futuresAddress,
     walletAddress
   };

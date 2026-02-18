@@ -2,7 +2,6 @@ import { FuturesContractStorage, Position } from '../contract/futuresContractSto
 import { PredictionService } from './predictionService.js';
 import { PNLCalculator, PNLResult } from '../pnl/pnlCalculator.js';
 import { MongoDBStorage } from '../storage/mongoStorage.js';
-import { ContractStorage } from '../contract/contractStorage.js';
 import { RetrievalService } from '../retrieval/retrievalService.js';
 import { PositionDatabase } from '../database/positionDatabase.js';
 import type { YellowService } from '../yellow/yellowService.js';
@@ -59,7 +58,6 @@ export class PositionService {
   private predictionService: PredictionService;
   private pnlCalculator: PNLCalculator;
   private mongoStorage: MongoDBStorage;
-  private oracleContract: ContractStorage;
   private retrievalService: RetrievalService;
   private positionDatabase?: PositionDatabase;
   private yellowService?: YellowService;
@@ -69,7 +67,6 @@ export class PositionService {
     predictionService: PredictionService,
     pnlCalculator: PNLCalculator,
     mongoStorage: MongoDBStorage,
-    oracleContract: ContractStorage,
     retrievalService: RetrievalService,
     positionDatabase?: PositionDatabase,
     yellowService?: YellowService
@@ -78,7 +75,6 @@ export class PositionService {
     this.predictionService = predictionService;
     this.pnlCalculator = pnlCalculator;
     this.mongoStorage = mongoStorage;
-    this.oracleContract = oracleContract;
     this.retrievalService = retrievalService;
     this.positionDatabase = positionDatabase;
     this.yellowService = yellowService;
@@ -280,7 +276,11 @@ export class PositionService {
 
       // Get commitment ID from the current minute (the minute containing the position start)
       const currentMinuteStart = Math.floor(openTimestamp / 60) * 60;
-      const actualPriceCommitmentId = await this.oracleContract.getCommitment(currentMinuteStart);
+      const actualPriceCommitmentId = await this.mongoStorage.getCommitment(currentMinuteStart);
+      
+      if (!actualPriceCommitmentId) {
+        throw new Error(`No commitment found for window ${currentMinuteStart}`);
+      }
 
       if (actualPrices.length !== 60) {
         throw new Error(`Invalid actual prices length: ${actualPrices.length}, expected 60`);

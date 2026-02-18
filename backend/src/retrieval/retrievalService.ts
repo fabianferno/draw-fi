@@ -1,18 +1,14 @@
 import { PriceWindowPayload, LiquidationRequest, LiquidationResult } from '../types/index.js';
-import { ContractStorage } from '../contract/contractStorage.js';
 import { MongoDBStorage } from '../storage/mongoStorage.js';
 import { PriceAggregator } from '../aggregator/priceAggregator.js';
 import logger from '../utils/logger.js';
 
 export class RetrievalService {
-  private contractStorage: ContractStorage;
   private mongoStorage: MongoDBStorage;
 
   constructor(
-    contractStorage: ContractStorage,
     mongoStorage: MongoDBStorage
   ) {
-    this.contractStorage = contractStorage;
     this.mongoStorage = mongoStorage;
   }
 
@@ -21,9 +17,9 @@ export class RetrievalService {
    */
   public async getLatestWindow(): Promise<PriceWindowPayload | null> {
     try {
-      const latestWindowTimestamp = await this.contractStorage.getLatestWindow();
+      const latestWindowTimestamp = await this.mongoStorage.getLatestWindow();
       
-      if (latestWindowTimestamp === 0) {
+      if (latestWindowTimestamp === null) {
         logger.info('No windows stored yet');
         return null;
       }
@@ -42,10 +38,10 @@ export class RetrievalService {
     try {
       logger.info('Retrieving window', { windowStart });
 
-      // Get commitment from contract
-      const commitment = await this.contractStorage.getCommitment(windowStart);
+      // Get commitment from MongoDB
+      const commitment = await this.mongoStorage.getCommitment(windowStart);
 
-      if (commitment === '0x' + '0'.repeat(64)) {
+      if (commitment === null) {
         logger.warn('No commitment found for window', { windowStart });
         return null;
       }
@@ -73,8 +69,8 @@ export class RetrievalService {
     try {
       logger.info('Retrieving windows in range', { start, end });
 
-      // Get window timestamps from contract
-      const windowTimestamps = await this.contractStorage.getWindowsInRange(start, end);
+      // Get window timestamps from MongoDB
+      const windowTimestamps = await this.mongoStorage.getWindowsInRange(start, end);
 
       if (windowTimestamps.length === 0) {
         logger.info('No windows found in range', { start, end });
@@ -335,9 +331,9 @@ export class RetrievalService {
     windowCount: number;
   }> {
     try {
-      const latestWindowTimestamp = await this.contractStorage.getLatestWindow();
+      const latestWindowTimestamp = await this.mongoStorage.getLatestWindow();
       
-      if (latestWindowTimestamp === 0) {
+      if (latestWindowTimestamp === null) {
         throw new Error('No windows available');
       }
 

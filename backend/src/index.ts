@@ -1,7 +1,6 @@
 import { PriceIngester } from './ingester/priceIngester.js';
 import { PriceAggregator } from './aggregator/priceAggregator.js';
 import { MongoDBStorage } from './storage/mongoStorage.js';
-import { ContractStorage } from './contract/contractStorage.js';
 import { RetrievalService } from './retrieval/retrievalService.js';
 import { Orchestrator } from './orchestrator/orchestrator.js';
 import { HealthMonitor } from './monitor/healthMonitor.js';
@@ -25,7 +24,6 @@ class MNTPriceOracleApp {
   private ingester: PriceIngester;
   private aggregator: PriceAggregator;
   private mongoStorage: MongoDBStorage;
-  private contractStorage: ContractStorage;
   private retrievalService: RetrievalService;
   private orchestrator: Orchestrator;
   private healthMonitor: HealthMonitor;
@@ -44,7 +42,6 @@ class MNTPriceOracleApp {
   constructor() {
     logger.info('Initializing Price Oracle & Line Futures', {
       network: config.network,
-      contractAddress: config.contractAddress,
       futuresContractAddress: config.futuresContractAddress
     });
 
@@ -52,23 +49,19 @@ class MNTPriceOracleApp {
     this.ingester = new PriceIngester(config.defaultPriceSymbol);
     this.aggregator = new PriceAggregator();
     this.mongoStorage = new MongoDBStorage();
-    this.contractStorage = new ContractStorage();
 
     this.retrievalService = new RetrievalService(
-      this.contractStorage,
       this.mongoStorage
     );
 
     this.orchestrator = new Orchestrator(
       this.ingester,
       this.aggregator,
-      this.mongoStorage,
-      this.contractStorage
+      this.mongoStorage
     );
 
     this.healthMonitor = new HealthMonitor(
-      this.orchestrator,
-      this.contractStorage
+      this.orchestrator
     );
 
     // Initialize position database (for leaderboard)
@@ -99,7 +92,6 @@ class MNTPriceOracleApp {
         this.predictionService,
         this.pnlCalculator,
         this.mongoStorage,
-        this.contractStorage,
         this.retrievalService,
         this.positionDatabase,
         this.yellowService

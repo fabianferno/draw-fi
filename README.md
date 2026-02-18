@@ -56,7 +56,7 @@
 │  ┌──────────────────────────────────┐                                      │
 │  │   DATA STORES                    │                                      │
 │  │  ├─ MongoDB (predictions/prices) │                                      │
-│  │  ├─ PriceOracle (on-chain refs)  │                                      │
+│  │  │  └─ price_commitments (index) │                                      │
 │  │  ├─ LineFutures (on-chain state) │                                      │
 │  │  └─ SQLite (leaderboard/history) │                                      │
 │  └──────────────────────────────────┘                                      │
@@ -124,21 +124,6 @@ struct Position {
 - `POSITION_DURATION` = 60 seconds
 - `feePercentage` = 200 basis points (2% on profits only)
 
-### PriceOracle.sol — Price Window Commitment Storage
-
-**Purpose**: Stores commitment strings (MongoDB ObjectIds) for 60-second price windows, indexed by minute-boundary timestamps.
-
-**Key Functions**:
-
-| Function              | Description                                                           |
-| --------------------- | --------------------------------------------------------------------- |
-| `storeCommitment()`  | Stores storage commitment for a given minute boundary. Submitter only. |
-| `getCommitment()`    | Retrieve commitment string for a specific window start timestamp.      |
-| `getLatestWindow()`  | Returns the most recent window timestamp.                              |
-| `getWindowsInRange()`| Query all windows within a time range.                                 |
-
-**Access Control**: Only the designated `submitter` address can write commitments. Anyone can read.
-
 ---
 
 ## Backend Architecture
@@ -148,7 +133,7 @@ The backend is organized into distinct pipelines, each responsible for a part of
 ### 5.1 Price Pipeline
 
 ```
-Bybit WebSocket → PriceIngester → PriceAggregator → MongoDB → PriceOracle
+Bybit WebSocket → PriceIngester → PriceAggregator → MongoDB (data + commitment index)
 ```
 
 1. **PriceIngester** (`src/ingester/priceIngester.ts`)
@@ -168,16 +153,13 @@ Bybit WebSocket → PriceIngester → PriceAggregator → MongoDB → PriceOracl
 3. **MongoDBStorage** (`src/storage/mongoStorage.ts`)
    - MongoDB client connected to Atlas cloud database
    - Retry logic: 3 attempts with exponential backoff (5s → 10s → 20s)
-   - Stores data in collections: `price_windows` and `user_predictions`
+   - Stores data in collections: `price_windows`, `user_predictions`, and `price_commitments`
    - Returns MongoDB ObjectId as hex string with `0x` prefix
+   - Stores commitment mappings (windowStart → commitment) in `price_commitments` collection
 
-4. **ContractStorage** (`src/contract/contractStorage.ts`)
-   - ethers.js wrapper for PriceOracle contract
-   - Submits price window commitments on-chain at each minute boundary
-
-5. **Orchestrator** (`src/orchestrator/orchestrator.ts`)
+4. **Orchestrator** (`src/orchestrator/orchestrator.ts`)
    - Coordinates the entire price pipeline end-to-end
-   - Event-driven: listens to `windowReady` → MongoDB submit → PriceOracle store
+   - Event-driven: listens to `windowReady` → MongoDB submit → MongoDB commitment storage
    - Window check interval every 5 seconds
 
 ### 5.2 Futures/Position Pipeline
@@ -192,7 +174,7 @@ Bybit WebSocket → PriceIngester → PriceAggregator → MongoDB → PriceOracl
    - Retrieves position details with predictions + analytics
    - Closes expired positions:
      - Retrieve predictions from MongoDB
-     - Retrieve actual prices from PriceOracle → MongoDB
+     - Retrieve actual prices from MongoDB (via commitment lookup)
      - Calculate PnL via PNLCalculator
      - Call `LineFutures.closePosition()` on-chain
      - Record in PositionDatabase (for leaderboard)
@@ -390,7 +372,7 @@ User draws curve:
 
 At position close time:
 1. Retrieve prediction commitment from LineFutures position data
-2. Retrieve actual price commitment from PriceOracle (by minute-aligned timestamp)
+2. Retrieve actual price commitment from MongoDB `price_commitments` collection (by minute-aligned timestamp)
 3. Fetch both documents from MongoDB using ObjectId commitments
 4. Extract 60-number arrays from documents
 5. Run PNL calculation on the two arrays
@@ -408,6 +390,7 @@ At position close time:
 **Collections:**
 - `price_windows` — 60-second price windows with indexes on `windowStart` and `createdAt`
 - `user_predictions` — User prediction data with indexes on `userAddress` and `createdAt`
+- `price_commitments` — Commitment mappings (windowStart → commitment) with unique index on `windowStart`
 
 **Benefits:**
 - Cloud-hosted with automatic backups
@@ -522,7 +505,7 @@ Users sign this typed data to authorize a position opening without paying gas th
    a. Read position data from contract (predictionCommitmentId, openTimestamp)
    b. Fetch prediction document from MongoDB using ObjectId → decode 60 numbers
    c. Compute minute-aligned window: openTimestamp rounded to minute boundary
-   d. Fetch actual price commitment from PriceOracle
+   d. Fetch actual price commitment from MongoDB `price_commitments` collection
    e. Fetch actual price document from MongoDB using ObjectId → decode 60 numbers
    f. PNLCalculator.calculatePNL(predictions, actualPrices, amount, leverage, 200bps)
    g. Call LineFutures.closePosition(positionId, pnl, actualPriceCommitmentId)
@@ -545,7 +528,7 @@ Users sign this typed data to authorize a position opening without paying gas th
    → Emits 'windowReady' event
 3. Orchestrator receives event:
    → Inserts 60-price document into MongoDB → ObjectId commitment
-   → Calls PriceOracle.storeCommitment(windowTimestamp, commitment)
+   → Stores commitment mapping in MongoDB `price_commitments` collection (windowStart → commitment)
 4. Commitment now available for position closing reference
 ```
 
@@ -568,8 +551,7 @@ Copy `backend/env.example` to `backend/.env.local` and fill in values.
 **Backend** (`backend/.env.local`):
 
 ```
-ETHEREUM_SEPOLIA_PRIVATE_KEY=
-CONTRACT_ADDRESS=           # PriceOracle address
+ETHEREUM_PRIVATE_KEY=
 FUTURES_CONTRACT_ADDRESS=   # LineFutures address
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 MONGODB_DATABASE=drawfi

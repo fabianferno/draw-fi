@@ -577,7 +577,7 @@ export default function HistoryPage() {
                             <div className="col-span-2 flex items-center justify-center">
                               {position.txHash ? (
                                 <a
-                                  href={`https://sepolia.etherscan.io/tx/${position.txHash}`}
+                                  href={`https://basescan.org/tx/${position.txHash}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-[#00E5FF] hover:text-[#00E5FF]/70 text-sm font-mono underline"

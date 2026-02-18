@@ -8,7 +8,6 @@ export interface Config {
   /** Optional fallback RPC URLs when primary returns 522/timeouts */
   ethereumRpcFallbackUrls: string[];
   ethereumPrivateKey: string;
-  contractAddress: string;
   futuresContractAddress: string;
   mongodbUri: string;
   mongodbDatabase: string;
@@ -46,13 +45,12 @@ function getOptionalEnvVar(key: string, defaultValue: string): string {
 
 export const config: Config = {
   network: (process.env.NETWORK || 'local') as 'mainnet' | 'testnet' | 'local',
-  ethereumRpcUrl: getOptionalEnvVar('ETHEREUM_RPC_URL', 'https://rpc.sepolia.org'),
+  ethereumRpcUrl: getOptionalEnvVar('ETHEREUM_RPC_URL', 'https://mainnet.base.org'),
   ethereumRpcFallbackUrls: (process.env.ETHEREUM_RPC_FALLBACK_URLS || '')
     .split(',')
     .map((u) => u.trim())
     .filter(Boolean),
-  ethereumPrivateKey: getEnvVar('ETHEREUM_SEPOLIA_PRIVATE_KEY'),
-  contractAddress: getEnvVar('CONTRACT_ADDRESS'),
+  ethereumPrivateKey: getEnvVar('ETHEREUM_PRIVATE_KEY'),
   futuresContractAddress: getEnvVar('FUTURES_CONTRACT_ADDRESS'),
   mongodbUri: getEnvVar('MONGODB_URI'),
   mongodbDatabase: getOptionalEnvVar('MONGODB_DATABASE', 'drawfi'),

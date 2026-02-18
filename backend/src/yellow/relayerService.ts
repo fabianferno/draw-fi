@@ -17,7 +17,7 @@ const LINEFUTURES_ABI = [
 export const EIP712_DOMAIN = {
   name: 'Draw-Fi',
   version: '1',
-  chainId: 11155111, // Sepolia
+  chainId: 8453, // Base mainnet
 };
 
 export const FUND_POSITION_TYPES = {
@@ -75,7 +75,7 @@ export class RelayerService {
 
   constructor() {
     const key = config.yellowPrivateKey || config.ethereumPrivateKey;
-    if (!key) throw new Error('YELLOW_RELAYER_PRIVATE_KEY or ETHEREUM_SEPOLIA_PRIVATE_KEY required');
+    if (!key) throw new Error('YELLOW_RELAYER_PRIVATE_KEY or ETHEREUM_PRIVATE_KEY required');
     this.provider = getEthereumProvider();
     this.wallet = new ethers.Wallet(key, this.provider);
     this.contract = new ethers.Contract(config.futuresContractAddress, LINEFUTURES_ABI, this.wallet);
@@ -105,7 +105,7 @@ export class RelayerService {
     };
 
     const digest = ethers.TypedDataEncoder.hash(
-      { ...EIP712_DOMAIN, chainId: 11155111 },
+      { ...EIP712_DOMAIN, chainId: 8453 },
       { FundPosition: FUND_POSITION_TYPES.FundPosition },
       message
     );
@@ -128,7 +128,7 @@ export class RelayerService {
         `Address: ${addr}. ` +
         `Required: ${ethers.formatEther(amountWei)} ETH (position size). ` +
         `Current: ${ethers.formatEther(balance)} ETH. ` +
-        `Send Sepolia ETH to ${addr} (use a Sepolia faucet if on testnet).`
+        `Send ETH on Base mainnet to ${addr}.`
       );
     }
 

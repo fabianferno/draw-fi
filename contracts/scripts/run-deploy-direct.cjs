@@ -36,7 +36,7 @@ function updateEnvFile(filePath, updates) {
 }
 
 console.log("Running direct deploy (no Ignition)...\n");
-execSync("pnpm exec hardhat run scripts/deploy-direct.ts --network sepolia", {
+execSync("pnpm exec hardhat run scripts/deploy-direct.ts --network base", {
   stdio: "inherit",
   env: process.env,
   cwd: contractsDir,

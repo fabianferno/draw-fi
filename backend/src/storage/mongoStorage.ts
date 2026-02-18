@@ -12,6 +12,7 @@ export class MongoDBStorage {
   private db: Db | null = null;
   private priceWindowsCollection: Collection | null = null;
   private predictionsCollection: Collection | null = null;
+  private priceCommitmentsCollection: Collection | null = null;
   private readonly maxRetries = 3;
   private readonly retryDelays = [5000, 10000, 20000]; // 5s, 10s, 20s
   private isConnected = false;
@@ -35,6 +36,7 @@ export class MongoDBStorage {
       // Get collection references
       this.priceWindowsCollection = this.db.collection('price_windows');
       this.predictionsCollection = this.db.collection('user_predictions');
+      this.priceCommitmentsCollection = this.db.collection('price_commitments');
 
       // Create indexes
       await this.createIndexes();
@@ -66,6 +68,13 @@ export class MongoDBStorage {
       await this.predictionsCollection!.createIndex({ userAddress: 1 });
       await this.predictionsCollection!.createIndex({ createdAt: 1 });
 
+      // Price commitments indexes
+      await this.priceCommitmentsCollection!.createIndex(
+        { windowStart: 1 },
+        { unique: true }
+      );
+      await this.priceCommitmentsCollection!.createIndex({ createdAt: 1 });
+
       logger.info('MongoDB indexes created successfully');
     } catch (error) {
       logger.warn('Failed to create some indexes (may already exist)', error);
@@ -76,7 +85,7 @@ export class MongoDBStorage {
    * Ensure connection is established
    */
   private ensureConnected(): void {
-    if (!this.isConnected || !this.db || !this.priceWindowsCollection || !this.predictionsCollection) {
+    if (!this.isConnected || !this.db || !this.priceWindowsCollection || !this.predictionsCollection || !this.priceCommitmentsCollection) {
       throw new Error('MongoDB not connected');
     }
   }
@@ -380,6 +389,119 @@ export class MongoDBStorage {
       logger.info('MongoDB connection closed');
     } catch (error) {
       logger.error('Error closing MongoDB connection', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Store a commitment mapping (windowStart → commitment)
+   */
+  public async storeCommitment(windowStart: number, commitment: string): Promise<void> {
+    this.ensureConnected();
+
+    logger.debug('Storing commitment in MongoDB', {
+      windowStart,
+      commitment: commitment.substring(0, 20) + '...'
+    });
+
+    const document = {
+      windowStart,
+      commitment,
+      createdAt: new Date()
+    };
+
+    try {
+      await this.priceCommitmentsCollection!.insertOne(document);
+      logger.info('Commitment stored successfully', { windowStart });
+    } catch (error: any) {
+      // Handle duplicate key error (windowStart already exists)
+      if (error.code === 11000) {
+        logger.warn('Commitment already exists for window, updating', { windowStart });
+        await this.priceCommitmentsCollection!.updateOne(
+          { windowStart },
+          { $set: { commitment, createdAt: new Date() } }
+        );
+      } else {
+        logger.error('Failed to store commitment', { windowStart, error });
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Get commitment for a specific window
+   */
+  public async getCommitment(windowStart: number): Promise<string | null> {
+    this.ensureConnected();
+
+    try {
+      const document = await this.priceCommitmentsCollection!.findOne({ windowStart });
+      
+      if (!document) {
+        logger.debug('No commitment found for window', { windowStart });
+        return null;
+      }
+
+      return document.commitment as string;
+    } catch (error) {
+      logger.error('Failed to get commitment', { windowStart, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get the latest window timestamp
+   */
+  public async getLatestWindow(): Promise<number | null> {
+    this.ensureConnected();
+
+    try {
+      const document = await this.priceCommitmentsCollection!
+        .findOne({}, { sort: { windowStart: -1 } });
+
+      if (!document) {
+        return null;
+      }
+
+      return document.windowStart as number;
+    } catch (error) {
+      logger.error('Failed to get latest window', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get window timestamps in a time range
+   */
+  public async getWindowsInRange(start: number, end: number): Promise<number[]> {
+    this.ensureConnected();
+
+    try {
+      const documents = await this.priceCommitmentsCollection!
+        .find({
+          windowStart: { $gte: start, $lte: end }
+        })
+        .sort({ windowStart: 1 })
+        .toArray();
+
+      return documents.map(doc => doc.windowStart as number);
+    } catch (error) {
+      logger.error('Failed to get windows in range', { start, end, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get total count of stored windows
+   */
+  public async getWindowCount(): Promise<number> {
+    this.ensureConnected();
+
+    try {
+      const count = await this.priceCommitmentsCollection!.countDocuments();
+      return count;
+    } catch (error) {
+      logger.error('Failed to get window count', { error });
       throw error;
     }
   }

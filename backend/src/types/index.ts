@@ -52,8 +52,6 @@ export interface HealthMetrics {
   bufferSize: number;
   lastStorageSubmission: number;
   storageSuccessRate: number;
-  lastContractSubmission: number;
-  contractSuccessRate: number;
   totalWindows: number;
 }
 

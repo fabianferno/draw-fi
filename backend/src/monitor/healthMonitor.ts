@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events';
 import { Orchestrator } from '../orchestrator/orchestrator.js';
-import { ContractStorage } from '../contract/contractStorage.js';
 import { HealthMetrics } from '../types/index.js';
 import logger from '../utils/logger.js';
 import config from '../config/config.js';
@@ -13,20 +12,16 @@ interface AlertCondition {
 
 export class HealthMonitor extends EventEmitter {
   private orchestrator: Orchestrator;
-  private contractStorage: ContractStorage;
   private monitorInterval: NodeJS.Timeout | null = null;
   private metrics: HealthMetrics;
   private storageSubmissions: { success: number; total: number } = { success: 0, total: 0 };
-  private contractSubmissions: { success: number; total: number } = { success: 0, total: 0 };
   private totalWindows = 0;
 
   constructor(
-    orchestrator: Orchestrator,
-    contractStorage: ContractStorage
+    orchestrator: Orchestrator
   ) {
     super();
     this.orchestrator = orchestrator;
-    this.contractStorage = contractStorage;
 
     this.metrics = {
       websocketConnected: false,
@@ -34,8 +29,6 @@ export class HealthMonitor extends EventEmitter {
       bufferSize: 0,
       lastStorageSubmission: 0,
       storageSuccessRate: 100,
-      lastContractSubmission: 0,
-      contractSuccessRate: 100,
       totalWindows: 0
     };
 
@@ -90,11 +83,8 @@ export class HealthMonitor extends EventEmitter {
       this.updateSuccessRates();
     });
 
-    // Track contract submissions
+    // Track commitment storage (now in MongoDB)
     this.orchestrator.on('commitmentStored', () => {
-      this.contractSubmissions.success++;
-      this.contractSubmissions.total++;
-      this.metrics.lastContractSubmission = Date.now();
       this.totalWindows++;
       this.updateSuccessRates();
     });
@@ -102,7 +92,6 @@ export class HealthMonitor extends EventEmitter {
     // Track failures
     this.orchestrator.on('windowProcessingError', (data) => {
       this.storageSubmissions.total++;
-      this.contractSubmissions.total++;
       this.updateSuccessRates();
       
       logger.error('Window processing error detected', data);
@@ -147,11 +136,6 @@ export class HealthMonitor extends EventEmitter {
       this.metrics.storageSuccessRate = 
         (this.storageSubmissions.success / this.storageSubmissions.total) * 100;
     }
-
-    if (this.contractSubmissions.total > 0) {
-      this.metrics.contractSuccessRate = 
-        (this.contractSubmissions.success / this.contractSubmissions.total) * 100;
-    }
   }
 
   /**
@@ -190,28 +174,12 @@ export class HealthMonitor extends EventEmitter {
         message: `Storage success rate is ${this.metrics.storageSuccessRate.toFixed(1)}%`
       },
       {
-        name: 'Contract Low Success Rate',
-        check: () => {
-          return this.contractSubmissions.total >= 3 && 
-                 this.metrics.contractSuccessRate < 90;
-        },
-        message: `Contract success rate is ${this.metrics.contractSuccessRate.toFixed(1)}%`
-      },
-      {
         name: 'No Recent Storage Submission',
         check: () => {
           const timeSinceSubmission = now - this.metrics.lastStorageSubmission;
           return this.metrics.lastStorageSubmission > 0 && timeSinceSubmission > 300000; // 5 minutes
         },
         message: 'No storage submission in the last 5 minutes'
-      },
-      {
-        name: 'No Recent Contract Submission',
-        check: () => {
-          const timeSinceSubmission = now - this.metrics.lastContractSubmission;
-          return this.metrics.lastContractSubmission > 0 && timeSinceSubmission > 300000; // 5 minutes
-        },
-        message: 'No contract submission in the last 5 minutes'
       }
     ];
 
@@ -289,10 +257,6 @@ export class HealthMonitor extends EventEmitter {
 
     if (this.metrics.storageSuccessRate < 90 && this.storageSubmissions.total >= 3) {
       issues.push(`Low storage success rate: ${this.metrics.storageSuccessRate.toFixed(1)}%`);
-    }
-
-    if (this.metrics.contractSuccessRate < 90 && this.contractSubmissions.total >= 3) {
-      issues.push(`Low contract success rate: ${this.metrics.contractSuccessRate.toFixed(1)}%`);
     }
 
     return {

@@ -38,9 +38,6 @@ contract LineFutures {
 
     bool public paused;
 
-    // Reference to PriceOracle contract
-    address public priceOracle;
-
     // Events
     event PositionOpened(
         uint256 indexed positionId,
@@ -83,17 +80,14 @@ contract LineFutures {
     }
 
     /**
-     * @notice Constructor sets the initial owner, PnL server, and oracle address
+     * @notice Constructor sets the initial owner and PnL server
      * @param _pnlServer Address authorized to close positions
-     * @param _priceOracle Address of the PriceOracle contract
      */
-    constructor(address _pnlServer, address _priceOracle) {
+    constructor(address _pnlServer) {
         require(_pnlServer != address(0), "LineFutures: PnL server is zero address");
-        require(_priceOracle != address(0), "LineFutures: oracle is zero address");
         
         owner = msg.sender;
         pnlServer = _pnlServer;
-        priceOracle = _priceOracle;
         
         emit PnLServerUpdated(address(0), _pnlServer);
     }

@@ -4,7 +4,7 @@
  * Run from repo root: node backend/scripts/redeploy-and-reconfigure.js
  * Or from backend: node scripts/redeploy-and-reconfigure.js
  *
- * Requires: backend/.env.local with ETHEREUM_SEPOLIA_PRIVATE_KEY (and ETHEREUM_RPC_URL if needed).
+ * Requires: backend/.env.local with ETHEREUM_PRIVATE_KEY (and ETHEREUM_RPC_URL if needed).
  * Deploy script loads env from backend/.env.local.
  */
 import fs from 'fs';
@@ -43,7 +43,7 @@ function clearDb() {
 
 const HHE10402 = 'HHE10402';
 const MAX_DEPLOY_ATTEMPTS = 6;
-const WAIT_FOR_CONFIRMS_MS = 90 * 1000; // 90s (~5 blocks on Sepolia)
+const WAIT_FOR_CONFIRMS_MS = 60 * 1000; // 60s (~several blocks on Base)
 const WAIT_PROGRESS_INTERVAL_MS = 15 * 1000; // log every 15s so it's clear we're not stuck
 
 function runDeploy() {
@@ -57,7 +57,7 @@ function runDeploy() {
 }
 
 async function runDeployWithRetry() {
-  console.log('Deploying PriceOracle and LineFutures to Sepolia...\n');
+  console.log('Deploying PriceOracle and LineFutures to Base mainnet...\n');
   let lastError;
   for (let attempt = 1; attempt <= MAX_DEPLOY_ATTEMPTS; attempt++) {
     try {
@@ -120,7 +120,7 @@ function updateEnvFile(filePath, updates) {
 
 function getDeployerAddress() {
   dotenv.config({ path: backendEnvPath });
-  const key = process.env.ETHEREUM_SEPOLIA_PRIVATE_KEY?.replace(/"/g, '').trim();
+  const key = process.env.ETHEREUM_PRIVATE_KEY?.replace(/"/g, '').trim();
   if (!key) return null;
   return new Wallet(key).address;
 }
@@ -130,7 +130,7 @@ async function main() {
 
   const deployer = getDeployerAddress();
   if (deployer) console.log('Deployer address:', deployer, '\n');
-  else console.warn('Deployer address unknown (ETHEREUM_SEPOLIA_PRIVATE_KEY not set in backend/.env.local)\n');
+  else console.warn('Deployer address unknown (ETHEREUM_PRIVATE_KEY not set in backend/.env.local)\n');
 
   clearDb();
 
