@@ -65,7 +65,7 @@ async function ensureSession(): Promise<YellowSession> {
     address: account.address,
     session_key: sessionAccount.address,
     application: APPLICATION_NAME,
-    allowances: [{ asset: 'ytest.usd', amount: '1000000000000' }],
+    allowances: [{ asset: config.yellowAsset, amount: '1000000000000' }],
     expires_at: expiresAt,
     scope: SCOPE,
   };
@@ -175,7 +175,7 @@ export function getDepositAddress(): Address {
 /** Get ledger transactions for our account (for deposit polling) */
 export async function getLedgerTransactions(
   accountId: string,
-  filters?: { tx_type?: string; asset?: string; limit?: number; offset?: number }
+  filters?: { tx_type?: string; asset?: string; limit?: number; offset?: number; sort?: string }
 ): Promise<Array<{ id: number; tx_type: string; from_account: string; to_account: string; asset: string; amount: string; created_at: Date }>> {
   try {
     const { sessionSigner } = await ensureSession();

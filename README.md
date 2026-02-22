@@ -244,7 +244,6 @@ Indexed on `user_address`, `open_timestamp`, `close_timestamp` for fast leaderbo
 | `/api/yellow/deposit-address`       | GET    | Where users send Yellow funds       |
 | `/api/yellow/deposit-balance/:addr` | GET    | User's credited balance             |
 | `/api/yellow/balance/:addr`         | GET    | Yellow Ledger balance               |
-| `/api/yellow/faucet`                | POST   | Request test tokens                 |
 | `/api/yellow/open-with-balance`     | POST   | Open position via EIP-712 signature |
 | `/api/yellow/config`                | GET    | Yellow network config               |
 
@@ -260,9 +259,8 @@ Indexed on `user_address`, `open_timestamp`, `close_timestamp` for fast leaderbo
    - **TokenPairSelector**: Choose BTC/USDT, ETH/USDT, AAVE/USDT, DOGE/USDT
    - **TradingChart**: Real-time price chart via lightweight-charts
    - **PatternDrawingBox**: Canvas for drawing predictions (left-to-right only, neon cyan glow)
-   - **BottomControls**: Amount slider (ytest.usd), leverage slider (1–2500x), submit/cancel
+   - **BottomControls**: Amount slider (USDC), leverage slider (1–2500x), submit/cancel
    - Time horizon: 1–5 minutes (offset)
-   - Yellow faucet integration for sandbox testing
    - Onboarding tour (NextStep library)
 
 3. **History Page** (`app/history/`) — View all user positions (open/closed) with details: position ID, token pair, amount, leverage, PnL, accuracy, timestamps.
@@ -283,7 +281,6 @@ Indexed on `user_address`, `open_timestamp`, `close_timestamp` for fast leaderbo
 - `usePredictionDrawing` — Drawing state (points, canvas operations)
 - `usePriceData` — Fetch price data from backend
 - `usePrivyWallet` — Wallet connection and signer via Privy
-- `useYellowFaucet` — Request faucet tokens
 - `useYellowDeposit` — Track Yellow balance
 - `useTokenPair` — Global token pair context
 
@@ -442,11 +439,11 @@ User signs EIP-712 ──────────→ RelayerService
 
 1. **YellowDepositPoller** — Polls Yellow ClearNode WebSocket every 15s for incoming transfers, credits user's off-chain balance.
 
-2. **YellowBalanceDatabase** — In-memory ledger tracking user balances in `ytest.usd` (6 decimals). Conversion: 1 ETH = 100 ytest.usd (configurable).
+2. **YellowBalanceDatabase** — Ledger tracking user balances in USDC (6 decimals). Rate: 1 ETH = `ETH_USD_RATE` USDC (configurable, default 3000).
 
 3. **RelayerService** — Accepts EIP-712 signed messages from users. Verifies signature, opens position on-chain using relayer's ETH. Maps `positionId → userAddress` for payout routing.
 
-4. **YellowService** — Orchestrates faucet requests, balance-based position opening, and payout processing on position close.
+4. **YellowService** — Orchestrates balance-based position opening and payout processing on position close.
 
 ### EIP-712 Signature Schema
 
@@ -483,13 +480,13 @@ Users sign this typed data to authorize a position opening without paying gas th
 ### Flow 2: Opening a Position (Yellow Balance, Gas-Free)
 
 ```
-1. User has ytest.usd balance (from Yellow deposits or faucet)
+1. User has USDC balance (from Yellow deposits)
 2. User draws prediction → uploads to MongoDB → gets commitment ID (ObjectId)
 3. User signs EIP-712 message: {address, amount, leverage, commitmentId, nonce, deadline}
 4. Frontend POST /api/yellow/open-with-balance with signature
 5. Backend RelayerService:
    - Verifies EIP-712 signature against user address
-   - Debits ytest.usd from user's off-chain balance
+   - Debits USDC from user's off-chain balance
    - Relayer wallet calls LineFutures.openPosition() with relayer's ETH
 6. Backend maps positionId → userAddress for payout routing
 7. Position is now live — user paid zero gas
@@ -512,7 +509,7 @@ Users sign this typed data to authorize a position opening without paying gas th
    h. Contract transfers (amount + pnl - fee) to user
    i. Record in SQLite closed_positions table
    j. If Yellow-funded: YellowService.processYellowPayout()
-      → Credit (amount + pnl - fee) in ytest.usd to user's balance
+      → Credit (amount + pnl - fee) in USDC to user's balance
 4. Failed closures enter retry queue (max 5 retries)
 ```
 
@@ -557,12 +554,15 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 MONGODB_DATABASE=drawfi
 ADMIN_API_KEY=
 
-# Yellow Network (required for opening positions)
-YELLOW_CLEARNODE_WS_URL=wss://clearnet-sandbox.yellow.com/ws
-YELLOW_RELAYER_PRIVATE_KEY= # or uses ETHEREUM_SEPOLIA_PRIVATE_KEY
-YELLOW_RELAYER_ENABLED=true # required for Yellow/Relayer positions
-YELLOW_ETH_TO_ytest_RATE=100 # 1 ETH = 100 ytest.usd
-YELLOW_FAUCET_ALSO_CREDIT=true # Faucet also credits Draw-Fi balance (sandbox - no transfer needed)
+# Yellow Network (optional - enables USDC balance-based position funding)
+YELLOW_CLEARNODE_WS_URL=wss://clearnet.yellow.com/ws
+YELLOW_RELAYER_PRIVATE_KEY=
+YELLOW_RELAYER_ENABLED=false # set to true to enable relayer
+ETH_USD_RATE=3000             # current ETH price in USD (used to convert USDC ↔ ETH wei)
+YELLOW_ASSET=usdc
+USDC_CONTRACT_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+CUSTODY_CONTRACT_ADDRESS=0x019B65A265EB3363822f2752141b3dF16131b262
+ADJUDICATOR_CONTRACT_ADDRESS=0x7c7ccbc98469190849BCC6c926307794fDfB11F2
 ```
 
 **Frontend** (`frontend/.env.local`):
@@ -571,7 +571,8 @@ YELLOW_FAUCET_ALSO_CREDIT=true # Faucet also credits Draw-Fi balance (sandbox - 
 NEXT_PUBLIC_FUTURES_CONTRACT_ADDRESS=
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 NEXT_PUBLIC_PRIVY_APP_ID=   # for embedded wallet
-NEXT_PUBLIC_ETHEREUM_RPC_URL=   # optional, Sepolia RPC
+NEXT_PUBLIC_ETHEREUM_RPC_URL=   # optional, Base RPC
+NEXT_PUBLIC_ETH_USD_RATE=3000   # must match backend ETH_USD_RATE
 ```
 
 ### Run

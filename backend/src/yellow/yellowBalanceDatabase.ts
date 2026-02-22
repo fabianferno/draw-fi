@@ -31,7 +31,25 @@ export class YellowBalanceDatabase {
     logger.info('YellowBalanceDatabase initialized', { dbPath: this.dbPath });
   }
 
+  /**
+   * Run schema migrations. Called automatically by initialize().
+   * Renames amount_ytest column to amount_usdc if the old column exists.
+   */
+  migrate(): void {
+    const tableExists = this.db.prepare(
+      "SELECT 1 FROM sqlite_master WHERE type='table' AND name='yellow_position_funding'"
+    ).get() != null;
+    if (!tableExists) return; // initialize() will create it with the correct schema
+    const cols = this.db.pragma('table_info(yellow_position_funding)') as { name: string }[];
+    const hasOldColumn = cols.some((c) => c.name === 'amount_ytest');
+    if (hasOldColumn) {
+      this.db.exec('ALTER TABLE yellow_position_funding RENAME COLUMN amount_ytest TO amount_usdc');
+      logger.info('YellowBalanceDatabase: migrated amount_ytest -> amount_usdc');
+    }
+  }
+
   initialize(): void {
+    this.migrate();
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS yellow_balances (
         user_address TEXT PRIMARY KEY,
@@ -51,7 +69,7 @@ export class YellowBalanceDatabase {
       CREATE TABLE IF NOT EXISTS yellow_position_funding (
         position_id INTEGER PRIMARY KEY,
         user_address TEXT NOT NULL,
-        amount_ytest TEXT NOT NULL,
+        amount_usdc TEXT NOT NULL,
         created_at INTEGER NOT NULL
       );
     `);
@@ -118,19 +136,19 @@ export class YellowBalanceDatabase {
   }
 
   /** Record that a position was funded from Yellow (for payout on close) */
-  recordYellowFundedPosition(positionId: number, userAddress: string, amountYtest: string): void {
+  recordYellowFundedPosition(positionId: number, userAddress: string, amountUsdc: string): void {
     const normalized = userAddress.toLowerCase();
     const now = Math.floor(Date.now() / 1000);
     this.db.prepare(`
-      INSERT OR REPLACE INTO yellow_position_funding (position_id, user_address, amount_ytest, created_at)
+      INSERT OR REPLACE INTO yellow_position_funding (position_id, user_address, amount_usdc, created_at)
       VALUES (?, ?, ?, ?)
-    `).run(positionId, normalized, amountYtest, now);
+    `).run(positionId, normalized, amountUsdc, now);
   }
 
-  getYellowFundedPosition(positionId: number): { userAddress: string; amountYtest: string } | null {
+  getYellowFundedPosition(positionId: number): { userAddress: string; amountUsdc: string } | null {
     const row = this.db.prepare(
-      'SELECT user_address as userAddress, amount_ytest as amountYtest FROM yellow_position_funding WHERE position_id = ?'
-    ).get(positionId) as { userAddress: string; amountYtest: string } | undefined;
+      'SELECT user_address as userAddress, amount_usdc as amountUsdc FROM yellow_position_funding WHERE position_id = ?'
+    ).get(positionId) as { userAddress: string; amountUsdc: string } | undefined;
     return row ?? null;
   }
 

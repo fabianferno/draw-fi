@@ -17,10 +17,10 @@ import {
 import { Header, BottomControls } from '@/components/layout';
 import { NoiseEffect } from '@/components/ui/NoiseEffect';
 import { usePrivyWallet } from '@/hooks/usePrivyWallet';
-import { useYellowFaucet, useYellowDeposit } from '@/hooks/useYellow';
+import { useYellowDeposit } from '@/hooks/useYellow';
 import { openPositionWithYellowBalance } from '@/lib/api/yellow';
 import { signFundPosition } from '@/lib/yellow/relayer';
-import { ytestToEthWei, getMinYtestAmount } from '@/lib/yellow/ytestConversion';
+import { usdcToEthWei, getMinUsdcAmount } from '@/lib/yellow/usdcConversion';
 import { predictTourId } from '@/lib/onboarding/predictTourSteps';
 
 const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
@@ -74,7 +74,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
 
   const [barSpacing, setBarSpacing] = useState(3);
   const [selectedMinute, setSelectedMinute] = useState<number | null>(null);
-  const [amount, setAmount] = useState<number>(1); // ytest.usd (1 = 0.01 ETH at default rate 100)
+  const [amount, setAmount] = useState<number>(1); // USDC
   const [leverage, setLeverage] = useState<number>(500);
   const [positionIds, setPositionIds] = useState<number[]>([]);
   const [positionStatus, setPositionStatus] = useState<'idle' | 'trading' | 'awaiting_settlement' | 'closed'>('idle');
@@ -84,16 +84,8 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const [isOpeningPosition, setIsOpeningPosition] = useState(false);
   const yellowNonceRef = { current: 0 };
 
-  const { request: requestFaucet, loading: faucetLoading, result: faucetResult } = useYellowFaucet(address ?? null);
   const { depositAddress, depositBalance, loading: yellowDepositLoading, refresh: refreshYellowDeposit } =
     useYellowDeposit(address ?? null);
-
-  // Refresh deposit balance when faucet succeeds (e.g. when YELLOW_FAUCET_ALSO_CREDIT credits us)
-  useEffect(() => {
-    if (faucetResult?.success) {
-      refreshYellowDeposit();
-    }
-  }, [faucetResult?.success, refreshYellowDeposit]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -292,9 +284,9 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
       return;
     }
     const amt = Number(amount);
-    const minYtest = getMinYtestAmount();
-    if (!Number.isFinite(amt) || amt < minYtest) {
-      alert(`Amount must be at least ${minYtest} ytest.usd to open a position.`);
+    const minUsdc = getMinUsdcAmount();
+    if (!Number.isFinite(amt) || amt < minUsdc) {
+      alert(`Amount must be at least ${minUsdc.toFixed(2)} USDC to open a position.`);
       return;
     }
 
@@ -305,7 +297,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
     }
 
     try {
-      const valueWei = ytestToEthWei(amt);
+      const valueWei = usdcToEthWei(amt);
       const openedIds: number[] = [];
 
       for (let i = 0; i < commitmentIds.length; i++) {
@@ -345,7 +337,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
           const friendlyMessage = isFundingUnavailable
             ? "Pay with Yellow balance isn't enabled on this server. Try opening with wallet ETH instead, or ask the operator to enable the Yellow relayer."
             : isAmountBelowMin
-              ? `Position amount is below minimum. Please use at least ${minYtest} ytest.usd.`
+              ? `Position amount is below minimum. Please use at least ${minUsdc.toFixed(2)} USDC.`
               : message;
           alert(`Error: ${friendlyMessage}`);
           if (openedIds.length === 0) return;
@@ -516,9 +508,6 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         yellowDepositLoading={yellowDepositLoading}
         depositAddress={depositAddress}
         onRefreshDeposit={refreshYellowDeposit}
-        onRequestFaucet={requestFaucet}
-        faucetLoading={faucetLoading}
-        faucetResult={faucetResult}
         isOpeningPosition={isOpeningPosition}
         positionStatus={positionStatus}
         statusMessageIndex={statusMessageIndex}
