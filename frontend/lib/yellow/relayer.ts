@@ -7,7 +7,7 @@ import type { Signer } from 'ethers';
 export const EIP712_DOMAIN = {
   name: 'Draw-Fi',
   version: '1',
-  chainId: 11155111,
+  chainId: 8453,
 };
 
 export const FUND_POSITION_TYPES = {

@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
 export interface Config {
   network: 'mainnet' | 'testnet' | 'local';
@@ -8,10 +8,8 @@ export interface Config {
   /** Optional fallback RPC URLs when primary returns 522/timeouts */
   ethereumRpcFallbackUrls: string[];
   ethereumPrivateKey: string;
-  contractAddress: string;
-  futuresContractAddress: string;
-  eigendaProxyUrl: string;
-  eigendaCommitmentMode: string;
+  mongodbUri: string;
+  mongodbDatabase: string;
   port: number;
   apiHost: string;
   bybitWssUrl: string;
@@ -21,14 +19,18 @@ export interface Config {
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   defaultPriceSymbol: string;
+  /** Futures contract address — required to enable futures/prediction features */
+  futuresContractAddress: string | null;
   /** Yellow Network - optional, enables Yellow integration */
   yellowClearnodeWsUrl: string;
   yellowPrivateKey: string | null;
   yellowRelayerEnabled: boolean;
-  yellowEthToYtestRate: number;
-  /** When true, faucet success also credits user's Draw-Fi balance (sandbox convenience - no separate transfer needed) */
-  yellowFaucetAlsoCredit: boolean;
-  /** Position IDs to never attempt to close (e.g. after EigenDA memstore loss). Comma-separated, e.g. "4,5" */
+  yellowAsset: string;
+  usdcContractAddress: string;
+  custodyContractAddress: string;
+  adjudicatorContractAddress: string;
+  ethUsdRate: number;
+  /** Position IDs to never attempt to close (e.g. after data loss). Comma-separated, e.g. "4,5" */
   skipPositionIds: number[];
 }
 
@@ -46,16 +48,14 @@ function getOptionalEnvVar(key: string, defaultValue: string): string {
 
 export const config: Config = {
   network: (process.env.NETWORK || 'local') as 'mainnet' | 'testnet' | 'local',
-  ethereumRpcUrl: getOptionalEnvVar('ETHEREUM_RPC_URL', 'https://rpc.sepolia.org'),
+  ethereumRpcUrl: getOptionalEnvVar('ETHEREUM_RPC_URL', 'https://mainnet.base.org'),
   ethereumRpcFallbackUrls: (process.env.ETHEREUM_RPC_FALLBACK_URLS || '')
     .split(',')
     .map((u) => u.trim())
     .filter(Boolean),
-  ethereumPrivateKey: getEnvVar('ETHEREUM_SEPOLIA_PRIVATE_KEY'),
-  contractAddress: getEnvVar('CONTRACT_ADDRESS'),
-  futuresContractAddress: getEnvVar('FUTURES_CONTRACT_ADDRESS'),
-  eigendaProxyUrl: getOptionalEnvVar('EIGENDA_PROXY_URL', 'http://127.0.0.1:3100'),
-  eigendaCommitmentMode: getOptionalEnvVar('EIGENDA_COMMITMENT_MODE', 'standard'),
+  ethereumPrivateKey: getEnvVar('ETHEREUM_PRIVATE_KEY'),
+  mongodbUri: getEnvVar('MONGODB_URI'),
+  mongodbDatabase: getOptionalEnvVar('MONGODB_DATABASE', 'drawfi'),
   port: parseInt(process.env.PORT || '3001', 10),
   apiHost: process.env.API_HOST || '0.0.0.0',
   bybitWssUrl: getOptionalEnvVar('BYBIT_WSS_URL', 'wss://stream.bybit.com/v5/public/spot'),
@@ -65,15 +65,18 @@ export const config: Config = {
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
   rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10),
   defaultPriceSymbol: getOptionalEnvVar('PRICE_SYMBOL', 'BTCUSDT'),
-  yellowClearnodeWsUrl: getOptionalEnvVar('YELLOW_CLEARNODE_WS_URL', 'wss://clearnet-sandbox.yellow.com/ws'),
+  futuresContractAddress: process.env.FUTURES_CONTRACT_ADDRESS || null,
+  yellowClearnodeWsUrl: getOptionalEnvVar('YELLOW_CLEARNODE_WS_URL', 'wss://clearnet.yellow.com/ws'),
   yellowPrivateKey: process.env.YELLOW_RELAYER_PRIVATE_KEY || null,
   yellowRelayerEnabled: process.env.YELLOW_RELAYER_ENABLED === 'true',
-  /** 1 ETH (1e18 wei) = this many ytest.usd units (6 decimals). e.g. 100 = 1 ETH = 100 ytest.usd */
-  yellowEthToYtestRate: (() => {
-    const v = parseFloat(process.env.YELLOW_ETH_TO_ytest_RATE || '100');
-    return Number.isFinite(v) && v > 0 ? v : 100;
+  ethUsdRate: (() => {
+    const v = parseFloat(process.env.ETH_USD_RATE || '3000');
+    return Number.isFinite(v) && v > 0 ? v : 3000;
   })(),
-  yellowFaucetAlsoCredit: process.env.YELLOW_FAUCET_ALSO_CREDIT === 'true',
+  yellowAsset: getOptionalEnvVar('YELLOW_ASSET', 'usdc'),
+  usdcContractAddress: getOptionalEnvVar('USDC_CONTRACT_ADDRESS', '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'),
+  custodyContractAddress: getOptionalEnvVar('CUSTODY_CONTRACT_ADDRESS', '0x019B65A265EB3363822f2752141b3dF16131b262'),
+  adjudicatorContractAddress: getOptionalEnvVar('ADJUDICATOR_CONTRACT_ADDRESS', '0x7c7ccbc98469190849BCC6c926307794fDfB11F2'),
   skipPositionIds: (process.env.SKIP_POSITION_IDS || '')
     .split(',')
     .map((s) => parseInt(s.trim(), 10))

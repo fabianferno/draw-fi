@@ -1,30 +1,26 @@
 import { EventEmitter } from 'events';
 import { PriceIngester } from '../ingester/priceIngester.js';
 import { PriceAggregator } from '../aggregator/priceAggregator.js';
-import { EigenDASubmitter } from '../eigenda/eigendaSubmitter.js';
-import { ContractStorage } from '../contract/contractStorage.js';
+import { MongoDBStorage } from '../storage/mongoStorage.js';
 import { PriceWindowPayload } from '../types/index.js';
 import logger from '../utils/logger.js';
 
 export class Orchestrator extends EventEmitter {
   private ingester: PriceIngester;
   private aggregator: PriceAggregator;
-  private eigenDASubmitter: EigenDASubmitter;
-  private contractStorage: ContractStorage;
+  private mongoStorage: MongoDBStorage;
   private isRunning = false;
   private windowCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
     ingester: PriceIngester,
     aggregator: PriceAggregator,
-    eigenDASubmitter: EigenDASubmitter,
-    contractStorage: ContractStorage
+    mongoStorage: MongoDBStorage
   ) {
     super();
     this.ingester = ingester;
     this.aggregator = aggregator;
-    this.eigenDASubmitter = eigenDASubmitter;
-    this.contractStorage = contractStorage;
+    this.mongoStorage = mongoStorage;
 
     this.setupEventHandlers();
   }
@@ -42,14 +38,6 @@ export class Orchestrator extends EventEmitter {
     this.isRunning = true;
 
     try {
-      // Test connections (non-blocking - allow server to start even if test fails)
-      logger.info('Testing connections...');
-
-      const contractConnected = await this.contractStorage.testConnection();
-      if (!contractConnected) {
-        logger.warn('Contract connection test failed, but continuing startup. Contract will be tested when used.');
-      }
-
       // Start price ingester
       await this.ingester.start();
 
@@ -159,36 +147,34 @@ export class Orchestrator extends EventEmitter {
     });
 
     try {
-      // Step 1: Submit to EigenDA
-      logger.info('Submitting to EigenDA', { windowStart: payload.windowStart });
-      const commitment = await this.eigenDASubmitter.submitPayload(payload);
+      // Step 1: Submit to MongoDB
+      logger.info('Submitting to MongoDB', { windowStart: payload.windowStart });
+      const commitment = await this.mongoStorage.submitPayload(payload);
 
-      this.emit('eigenDASubmitted', {
+      this.emit('dataStored', {
         windowStart: payload.windowStart,
         commitment: commitment.commitment
       });
 
-      // Step 2: Store commitment on-chain
-      logger.info('Storing commitment on-chain', {
+      // Step 2: Store commitment mapping in MongoDB
+      logger.info('Storing commitment mapping in MongoDB', {
         windowStart: payload.windowStart,
         commitment: commitment.commitment
       });
 
-      const txHash = await this.contractStorage.storeCommitment(
+      await this.mongoStorage.storeCommitment(
         payload.windowStart,
         commitment.commitment
       );
 
       this.emit('commitmentStored', {
         windowStart: payload.windowStart,
-        commitment: commitment.commitment,
-        txHash
+        commitment: commitment.commitment
       });
 
       logger.info('Window processing completed successfully', {
         windowStart: payload.windowStart,
-        commitment: commitment.commitment,
-        txHash
+        commitment: commitment.commitment
       });
 
     } catch (error) {

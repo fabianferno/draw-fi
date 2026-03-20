@@ -5,9 +5,9 @@
 import { getDepositAddress, getLedgerTransactions } from './yellowAuth.js';
 import { YellowBalanceDatabase } from './yellowBalanceDatabase.js';
 import logger from '../utils/logger.js';
+import config from '../config/config.js';
 
 const POLL_INTERVAL_MS = 15_000; // 15 seconds
-const YTEST_USD = 'ytest.usd';
 
 let pollerInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -18,7 +18,7 @@ export function startYellowDepositPoller(yellowBalanceDb: YellowBalanceDatabase)
       const ourAddress = getDepositAddress();
       const txs = await getLedgerTransactions(ourAddress, {
         tx_type: 'transfer',
-        asset: YTEST_USD,
+        asset: config.yellowAsset,
         limit: 50,
         sort: 'desc',
       });

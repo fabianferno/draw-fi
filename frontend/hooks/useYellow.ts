@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   getYellowBalance,
-  requestYellowFaucet,
   getDepositAddress,
   getYellowDepositBalance,
   type YellowBalance,
@@ -33,27 +32,6 @@ export function useYellowBalance(address: string | null) {
   }, [refresh]);
 
   return { balances, loading, error, refresh };
-}
-
-export function useYellowFaucet(address: string | null) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message?: string } | null>(null);
-
-  const request = useCallback(async () => {
-    if (!address) return;
-    setLoading(true);
-    setResult(null);
-    try {
-      const r = await requestYellowFaucet(address);
-      setResult(r);
-    } catch (e) {
-      setResult({ success: false, message: e instanceof Error ? e.message : 'Request failed' });
-    } finally {
-      setLoading(false);
-    }
-  }, [address]);
-
-  return { request, loading, result };
 }
 
 export function useYellowDeposit(address: string | null) {

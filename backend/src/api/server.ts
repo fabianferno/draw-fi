@@ -136,7 +136,6 @@ export class APIServer {
 
     if (this.yellowService) {
       this.app.get('/api/yellow/balance/:address', this.handleYellowBalance.bind(this));
-      this.app.post('/api/yellow/faucet', this.handleYellowFaucet.bind(this));
       this.app.get('/api/yellow/config', this.handleYellowConfig.bind(this));
       this.app.get('/api/yellow/deposit-address', this.handleYellowDepositAddress.bind(this));
       this.app.get('/api/yellow/deposit-balance/:address', this.handleYellowDepositBalance.bind(this));
@@ -876,28 +875,6 @@ export class APIServer {
     } catch (error) {
       logger.error('Yellow balance failed', error);
       res.status(500).json({ error: 'Failed to get Yellow balance' });
-    }
-  };
-
-  /**
-   * Handle Yellow faucet request
-   */
-  private handleYellowFaucet = async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!this.yellowService) {
-        res.status(503).json({ error: 'Yellow service not available' });
-        return;
-      }
-      const { userAddress } = req.body;
-      if (!userAddress || !/^0x[a-fA-F0-9]{40}$/.test(userAddress)) {
-        res.status(400).json({ error: 'Invalid userAddress' });
-        return;
-      }
-      const result = await this.yellowService.requestFaucetTokens(userAddress);
-      res.json(result);
-    } catch (error) {
-      logger.error('Yellow faucet failed', error);
-      res.status(500).json({ error: 'Faucet request failed' });
     }
   };
 

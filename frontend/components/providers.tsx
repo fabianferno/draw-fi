@@ -12,11 +12,11 @@ const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
 
 const queryClient = new QueryClient();
 
-// Define Ethereum Sepolia chain for Privy
-const ethereumSepoliaChain = defineChain({
-  id: 11155111,
-  name: 'Ethereum Sepolia',
-  network: 'sepolia',
+// Define Base mainnet chain for Privy
+const baseChain = defineChain({
+  id: 8453,
+  name: 'Base',
+  network: 'base-mainnet',
   nativeCurrency: {
     name: 'Ether',
     symbol: 'ETH',
@@ -26,17 +26,17 @@ const ethereumSepoliaChain = defineChain({
     default: {
       http: [
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ||
-        'https://rpc.sepolia.org',
+        'https://mainnet.base.org',
       ],
     },
   },
   blockExplorers: {
     default: {
-      name: 'Etherscan Sepolia',
-      url: 'https://sepolia.etherscan.io/',
+      name: 'BaseScan',
+      url: 'https://basescan.org/',
     },
   },
-  testnet: true,
+  testnet: false,
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -63,8 +63,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           noPromptOnSignature: true,
           showWalletUIs: false,
         },
-        defaultChain: ethereumSepoliaChain,
-        supportedChains: [ethereumSepoliaChain],
+        defaultChain: baseChain,
+        supportedChains: [baseChain],
       }}
     >
       <QueryClientProvider client={queryClient}>

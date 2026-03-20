@@ -1,7 +1,6 @@
 import { PriceIngester } from './ingester/priceIngester.js';
 import { PriceAggregator } from './aggregator/priceAggregator.js';
-import { EigenDASubmitter } from './eigenda/eigendaSubmitter.js';
-import { ContractStorage } from './contract/contractStorage.js';
+import { MongoDBStorage } from './storage/mongoStorage.js';
 import { RetrievalService } from './retrieval/retrievalService.js';
 import { Orchestrator } from './orchestrator/orchestrator.js';
 import { HealthMonitor } from './monitor/healthMonitor.js';
@@ -24,8 +23,7 @@ import config from './config/config.js';
 class MNTPriceOracleApp {
   private ingester: PriceIngester;
   private aggregator: PriceAggregator;
-  private eigenDASubmitter: EigenDASubmitter;
-  private contractStorage: ContractStorage;
+  private mongoStorage: MongoDBStorage;
   private retrievalService: RetrievalService;
   private orchestrator: Orchestrator;
   private healthMonitor: HealthMonitor;
@@ -44,31 +42,26 @@ class MNTPriceOracleApp {
   constructor() {
     logger.info('Initializing Price Oracle & Line Futures', {
       network: config.network,
-      contractAddress: config.contractAddress,
       futuresContractAddress: config.futuresContractAddress
     });
 
     // Initialize oracle components
     this.ingester = new PriceIngester(config.defaultPriceSymbol);
     this.aggregator = new PriceAggregator();
-    this.eigenDASubmitter = new EigenDASubmitter();
-    this.contractStorage = new ContractStorage();
+    this.mongoStorage = new MongoDBStorage();
 
     this.retrievalService = new RetrievalService(
-      this.contractStorage,
-      this.eigenDASubmitter
+      this.mongoStorage
     );
 
     this.orchestrator = new Orchestrator(
       this.ingester,
       this.aggregator,
-      this.eigenDASubmitter,
-      this.contractStorage
+      this.mongoStorage
     );
 
     this.healthMonitor = new HealthMonitor(
-      this.orchestrator,
-      this.contractStorage
+      this.orchestrator
     );
 
     // Initialize position database (for leaderboard)
@@ -83,7 +76,7 @@ class MNTPriceOracleApp {
       this.futuresContractStorage = new FuturesContractStorage();
 
       this.predictionService = new PredictionService(
-        this.eigenDASubmitter,
+        this.mongoStorage,
         config.rateLimitWindowMs,
         config.rateLimitMaxRequests
       );
@@ -98,8 +91,7 @@ class MNTPriceOracleApp {
         this.futuresContractStorage,
         this.predictionService,
         this.pnlCalculator,
-        this.eigenDASubmitter,
-        this.contractStorage,
+        this.mongoStorage,
         this.retrievalService,
         this.positionDatabase,
         this.yellowService

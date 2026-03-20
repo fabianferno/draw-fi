@@ -13,7 +13,7 @@ import {
 } from '@erc7824/nitrolite';
 import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
-import { sepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import type { Hex, Address } from 'viem';
 import { YellowClient } from './yellowClient.js';
 import logger from '../utils/logger.js';
@@ -44,7 +44,7 @@ function getYellowClient(): YellowClient {
 
 function getPrivateKey(): Hex {
   const key = config.yellowPrivateKey || config.ethereumPrivateKey;
-  if (!key) throw new Error('YELLOW_RELAYER_PRIVATE_KEY or ETHEREUM_SEPOLIA_PRIVATE_KEY required for Yellow');
+  if (!key) throw new Error('YELLOW_RELAYER_PRIVATE_KEY or ETHEREUM_PRIVATE_KEY required for Yellow');
   return key.replace(/^0x/, '').length === 64 ? (`0x${key.replace(/^0x/, '')}` as Hex) : (key as Hex);
 }
 
@@ -65,7 +65,7 @@ async function ensureSession(): Promise<YellowSession> {
     address: account.address,
     session_key: sessionAccount.address,
     application: APPLICATION_NAME,
-    allowances: [{ asset: 'ytest.usd', amount: '1000000000000' }],
+    allowances: [{ asset: config.yellowAsset, amount: '1000000000000' }],
     expires_at: expiresAt,
     scope: SCOPE,
   };
@@ -84,7 +84,7 @@ async function ensureSession(): Promise<YellowSession> {
 
   const walletClient = createWalletClient({
     account,
-    chain: sepolia,
+    chain: base,
     transport: http(config.ethereumRpcUrl),
   });
   const signer = createEIP712AuthMessageSigner(
@@ -175,7 +175,7 @@ export function getDepositAddress(): Address {
 /** Get ledger transactions for our account (for deposit polling) */
 export async function getLedgerTransactions(
   accountId: string,
-  filters?: { tx_type?: string; asset?: string; limit?: number; offset?: number }
+  filters?: { tx_type?: string; asset?: string; limit?: number; offset?: number; sort?: string }
 ): Promise<Array<{ id: number; tx_type: string; from_account: string; to_account: string; asset: string; amount: string; created_at: Date }>> {
   try {
     const { sessionSigner } = await ensureSession();

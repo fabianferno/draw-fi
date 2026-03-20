@@ -192,7 +192,7 @@ export class PositionCloser {
     const isRetrievalError = 
       errorMessage.includes('Failed to retrieve') ||
       errorMessage.includes('not found') ||
-      errorMessage.includes('EigenDA') ||
+      errorMessage.includes('MongoDB') ||
       errorMessage.includes('Actual price data not found') ||
       errorMessage.includes('price data not found for position window') ||
       errorMessage.includes('window not found') ||

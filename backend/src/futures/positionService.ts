@@ -1,8 +1,7 @@
 import { FuturesContractStorage, Position } from '../contract/futuresContractStorage.js';
 import { PredictionService } from './predictionService.js';
 import { PNLCalculator, PNLResult } from '../pnl/pnlCalculator.js';
-import { EigenDASubmitter } from '../eigenda/eigendaSubmitter.js';
-import { ContractStorage } from '../contract/contractStorage.js';
+import { MongoDBStorage } from '../storage/mongoStorage.js';
 import { RetrievalService } from '../retrieval/retrievalService.js';
 import { PositionDatabase } from '../database/positionDatabase.js';
 import type { YellowService } from '../yellow/yellowService.js';
@@ -58,8 +57,7 @@ export class PositionService {
   private futuresContract: FuturesContractStorage;
   private predictionService: PredictionService;
   private pnlCalculator: PNLCalculator;
-  private eigenDASubmitter: EigenDASubmitter;
-  private oracleContract: ContractStorage;
+  private mongoStorage: MongoDBStorage;
   private retrievalService: RetrievalService;
   private positionDatabase?: PositionDatabase;
   private yellowService?: YellowService;
@@ -68,8 +66,7 @@ export class PositionService {
     futuresContract: FuturesContractStorage,
     predictionService: PredictionService,
     pnlCalculator: PNLCalculator,
-    eigenDASubmitter: EigenDASubmitter,
-    oracleContract: ContractStorage,
+    mongoStorage: MongoDBStorage,
     retrievalService: RetrievalService,
     positionDatabase?: PositionDatabase,
     yellowService?: YellowService
@@ -77,8 +74,7 @@ export class PositionService {
     this.futuresContract = futuresContract;
     this.predictionService = predictionService;
     this.pnlCalculator = pnlCalculator;
-    this.eigenDASubmitter = eigenDASubmitter;
-    this.oracleContract = oracleContract;
+    this.mongoStorage = mongoStorage;
     this.retrievalService = retrievalService;
     this.positionDatabase = positionDatabase;
     this.yellowService = yellowService;
@@ -136,7 +132,7 @@ export class PositionService {
       if (includeAnalytics && !position.isOpen && position.actualPriceCommitmentId) {
         try {
           // Get actual prices from oracle
-          const actualPriceData = await this.eigenDASubmitter.retrieveData(
+          const actualPriceData = await this.mongoStorage.retrieveData(
             position.actualPriceCommitmentId
           );
           details.actualPrices = actualPriceData.prices;
@@ -232,7 +228,7 @@ export class PositionService {
         throw new Error(`Position cannot be closed yet. ${remaining} seconds remaining`);
       }
 
-      // Step 3: Retrieve user predictions from EigenDA
+      // Step 3: Retrieve user predictions from MongoDB
       logger.info('Retrieving user predictions', {
         positionId,
         commitmentId: position.predictionCommitmentId
@@ -280,7 +276,11 @@ export class PositionService {
 
       // Get commitment ID from the current minute (the minute containing the position start)
       const currentMinuteStart = Math.floor(openTimestamp / 60) * 60;
-      const actualPriceCommitmentId = await this.oracleContract.getCommitment(currentMinuteStart);
+      const actualPriceCommitmentId = await this.mongoStorage.getCommitment(currentMinuteStart);
+      
+      if (!actualPriceCommitmentId) {
+        throw new Error(`No commitment found for window ${currentMinuteStart}`);
+      }
 
       if (actualPrices.length !== 60) {
         throw new Error(`Invalid actual prices length: ${actualPrices.length}, expected 60`);

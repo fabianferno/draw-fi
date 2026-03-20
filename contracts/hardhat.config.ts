@@ -38,14 +38,14 @@ export default defineConfig({
       type: "edr-simulated",
       chainType: "op",
     },
-    sepolia: {
+    base: {
       type: "http",
-      chainType: "l1",
-      url: process.env.ETHEREUM_RPC_URL?.replace(/"/g, "") || "https://rpc.sepolia.org",
-      chainId: 11155111,
-      accounts: process.env.ETHEREUM_SEPOLIA_PRIVATE_KEY
-        ? [process.env.ETHEREUM_SEPOLIA_PRIVATE_KEY.replace(/"/g, "")]
-        : [configVariable("ETHEREUM_SEPOLIA_PRIVATE_KEY")],
+      chainType: "op",
+      url: process.env.ETHEREUM_RPC_URL?.replace(/"/g, "") || "https://mainnet.base.org",
+      chainId: 8453,
+      accounts: process.env.ETHEREUM_PRIVATE_KEY
+        ? [process.env.ETHEREUM_PRIVATE_KEY.replace(/"/g, "")]
+        : [configVariable("ETHEREUM_PRIVATE_KEY")],
     },
   },
 });

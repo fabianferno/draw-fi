@@ -6,7 +6,7 @@ import { ethers } from 'ethers';
 import config from './config/config.js';
 import logger from './utils/logger.js';
 
-const SEPOLIA_CHAIN_ID = 11155111;
+const BASE_CHAIN_ID = 8453;
 let cachedProvider: ethers.AbstractProvider | null = null;
 
 function getProvider(): ethers.AbstractProvider {
@@ -21,7 +21,7 @@ function getProvider(): ethers.AbstractProvider {
     return cachedProvider;
   }
 
-  const network = new ethers.Network('sepolia', SEPOLIA_CHAIN_ID);
+  const network = new ethers.Network('base', BASE_CHAIN_ID);
   const providerList = [
     new ethers.JsonRpcProvider(primary, network),
     ...fallbacks.map((url) => new ethers.JsonRpcProvider(url, network)),

@@ -13,17 +13,6 @@ export async function getYellowBalance(address: string): Promise<YellowBalance[]
   return json.balances ?? [];
 }
 
-export async function requestYellowFaucet(userAddress: string): Promise<{ success: boolean; message?: string }> {
-  const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/faucet`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userAddress }),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) return { success: false, message: json.error || `Request failed (${res.status})` };
-  return { success: json.success !== false, message: json.message };
-}
-
 /** Get our deposit address (users transfer Yellow tokens here) */
 export async function getDepositAddress(): Promise<string> {
   const res = await fetch(`${DEFAULT_BACKEND_URL}/api/yellow/deposit-address`);
