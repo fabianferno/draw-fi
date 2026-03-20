@@ -16,6 +16,7 @@ const SLIDES = [
   'tech-arch-img',
   'yellow',
   'demo',
+  'walkthrough-vid',
   'features-img',
   'traction',
   'team',
@@ -31,6 +32,7 @@ const SLIDE_LABELS = [
   'Architecture',
   'Yellow',
   'Demo',
+  'Walkthrough',
   'Features',
   'Traction',
   'Team',
@@ -675,9 +677,26 @@ export default function PitchPage() {
           </motion.div>
         </div>
 
-        {/* ===== SLIDE 10: FEATURES IMAGE ===== */}
+        {/* ===== SLIDE 10: WALKTHROUGH VIDEO ===== */}
         <div
           ref={(el) => { slideRefs.current[9] = el; }}
+          className="snap-start h-screen flex items-center justify-center relative bg-black"
+        >
+          <video
+            src={
+              process.env.NEXT_PUBLIC_PITCH_WALKTHROUGH_VIDEO_URL ||
+              '/slides/DrawFi-Walkthrough.mp4'
+            }
+            className="w-full h-full object-contain"
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </div>
+
+        {/* ===== SLIDE 11: FEATURES IMAGE ===== */}
+        <div
+          ref={(el) => { slideRefs.current[10] = el; }}
           className="snap-start h-screen flex items-center justify-center relative bg-black"
         >
           <Image
@@ -689,9 +708,9 @@ export default function PitchPage() {
           />
         </div>
 
-        {/* ===== SLIDE 11: TRACTION + ROADMAP ===== */}
+        {/* ===== SLIDE 12: TRACTION + ROADMAP ===== */}
         <div
-          ref={(el) => { slideRefs.current[10] = el; }}
+          ref={(el) => { slideRefs.current[11] = el; }}
           className="snap-start h-screen flex items-center justify-center relative"
         >
           <motion.div
@@ -705,7 +724,7 @@ export default function PitchPage() {
               variants={itemVariants}
               custom={0}
             >
-              10 — Traction & Roadmap
+              11 — Traction & Roadmap
             </motion.p>
 
             <motion.h2
@@ -772,9 +791,9 @@ export default function PitchPage() {
           </motion.div>
         </div>
 
-        {/* ===== SLIDE 12: TEAM ===== */}
+        {/* ===== SLIDE 13: TEAM ===== */}
         <div
-          ref={(el) => { slideRefs.current[11] = el; }}
+          ref={(el) => { slideRefs.current[12] = el; }}
           className="snap-start h-screen flex items-center justify-center relative"
         >
           <div
@@ -794,7 +813,7 @@ export default function PitchPage() {
               variants={itemVariants}
               custom={0}
             >
-              11 — Team
+              12 — Team
             </motion.p>
 
             <motion.h2
