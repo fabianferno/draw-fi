@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 
-dotenv.config({ path: ".env" });
+// `.env.local` overrides `.env` (matches common local dev layout).
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', override: true });
 
 export interface Config {
   network: 'mainnet' | 'testnet' | 'local';

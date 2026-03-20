@@ -38,8 +38,8 @@ COPY scripts ./scripts
 # Build TypeScript code
 RUN pnpm build
 
-# Copy environment variables (from env.example as .env)
-COPY env.example .env
+# Copy environment variables (from .env.example as .env)
+COPY .env.example .env
 
 # Expose the port
 EXPOSE 3001

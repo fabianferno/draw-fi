@@ -543,9 +543,9 @@ Users sign this typed data to authorize a position opening without paying gas th
 
 ### Environment
 
-Copy `backend/env.example` to `backend/.env.local` and fill in values.
+Copy `backend/.env.example` to `backend/.env` and fill in values. (The server loads `backend/.env` via dotenv.)
 
-**Backend** (`backend/.env.local`):
+**Backend** (`backend/.env`):
 
 ```
 ETHEREUM_PRIVATE_KEY=
@@ -565,7 +565,7 @@ CUSTODY_CONTRACT_ADDRESS=0x019B65A265EB3363822f2752141b3dF16131b262
 ADJUDICATOR_CONTRACT_ADDRESS=0x7c7ccbc98469190849BCC6c926307794fDfB11F2
 ```
 
-**Frontend** (`frontend/.env.local`):
+**Frontend** — copy `frontend/.env.example` to `frontend/.env.local`:
 
 ```
 NEXT_PUBLIC_FUTURES_CONTRACT_ADDRESS=
@@ -574,6 +574,8 @@ NEXT_PUBLIC_PRIVY_APP_ID=   # for embedded wallet
 NEXT_PUBLIC_ETHEREUM_RPC_URL=   # optional, Base RPC
 NEXT_PUBLIC_ETH_USD_RATE=3000   # must match backend ETH_USD_RATE
 ```
+
+**Contracts** — copy `contracts/.env.example` to `contracts/.env` when running Hardhat deploy scripts (needs `ETHEREUM_PRIVATE_KEY` and optionally `ETHEREUM_RPC_URL`).
 
 ### Run
 
