@@ -16,9 +16,17 @@ const logLevelMap: Record<string, LogLevel> = {
 
 const currentLogLevel = logLevelMap[config.logLevel.toLowerCase()] || LogLevel.INFO;
 
+function jsonForLog(value: unknown): string {
+  return JSON.stringify(value, (_key, v) => {
+    if (typeof v === 'bigint') return v.toString();
+    if (v instanceof Error) return { name: v.name, message: v.message, stack: v.stack };
+    return v;
+  });
+}
+
 function formatMessage(level: string, message: string, data?: any): string {
   const timestamp = new Date().toISOString();
-  const dataStr = data ? ` ${JSON.stringify(data)}` : '';
+  const dataStr = data ? ` ${jsonForLog(data)}` : '';
   return `[${timestamp}] [${level}] ${message}${dataStr}`;
 }
 

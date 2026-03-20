@@ -11,9 +11,9 @@ import {
   createGetLedgerTransactionsMessage,
   createTransferMessage,
 } from '@erc7824/nitrolite';
-import { createWalletClient, http } from 'viem';
+import { createWalletClient, defineChain, http } from 'viem';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
-import { base } from 'viem/chains';
+import { base, hardhat, sepolia } from 'viem/chains';
 import type { Hex, Address } from 'viem';
 import { YellowClient } from './yellowClient.js';
 import logger from '../utils/logger.js';
@@ -46,6 +46,34 @@ function getPrivateKey(): Hex {
   const key = config.yellowPrivateKey || config.ethereumPrivateKey;
   if (!key) throw new Error('YELLOW_RELAYER_PRIVATE_KEY or ETHEREUM_PRIVATE_KEY required for Yellow');
   return key.replace(/^0x/, '').length === 64 ? (`0x${key.replace(/^0x/, '')}` as Hex) : (key as Hex);
+}
+
+/** Must match ETHEREUM_RPC_URL chain (same rules as ethereumProvider pinned network). */
+function getViemChainForWallet() {
+  const raw = process.env.ETHEREUM_CHAIN_ID?.trim();
+  if (raw) {
+    const id = parseInt(raw, 10);
+    if (Number.isFinite(id) && id > 0) {
+      if (id === 8453) return base;
+      if (id === 11155111) return sepolia;
+      if (id === 31337) return hardhat;
+      return defineChain({
+        id,
+        name: 'custom',
+        nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+        rpcUrls: { default: { http: [config.ethereumRpcUrl] } },
+      });
+    }
+  }
+  switch (config.network) {
+    case 'mainnet':
+      return base;
+    case 'testnet':
+      return sepolia;
+    case 'local':
+    default:
+      return hardhat;
+  }
 }
 
 async function ensureSession(): Promise<YellowSession> {
@@ -84,7 +112,7 @@ async function ensureSession(): Promise<YellowSession> {
 
   const walletClient = createWalletClient({
     account,
-    chain: base,
+    chain: getViemChainForWallet(),
     transport: http(config.ethereumRpcUrl),
   });
   const signer = createEIP712AuthMessageSigner(
@@ -184,6 +212,10 @@ export async function getLedgerTransactions(
     const response = await client.sendAndWait(msg);
     const method = Array.isArray(response.res) ? response.res[1] : undefined;
     const params = Array.isArray(response.res) ? response.res[2] : undefined;
+    if (method === 'error') {
+      logger.warn('getLedgerTransactions Yellow error response', { params });
+      return [];
+    }
     if (method === 'get_ledger_transactions' && params?.transactions) {
       return (params.transactions as Array<{
         id: number;
