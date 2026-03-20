@@ -49,6 +49,12 @@ export function Footer() {
             >
               Positions
             </Link>
+            <Link
+              href="/pitch"
+              className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
+            >
+              Pitch
+            </Link>
           </div>
 
           {/* Built with love */}
