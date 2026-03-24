@@ -22,6 +22,7 @@ import { openPositionWithYellowBalance } from '@/lib/api/yellow';
 import { signFundPosition } from '@/lib/yellow/relayer';
 import { usdcToEthWei, getMinUsdcAmount } from '@/lib/yellow/usdcConversion';
 import { predictTourId } from '@/lib/onboarding/predictTourSteps';
+import { useOpenPosition, type PositionStatus, type PositionResult } from '@/hooks/useOpenPosition';
 
 const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
 
@@ -38,6 +39,73 @@ const LINE_FUTURES_ABI = [
 const DEFAULT_FUTURES_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_FUTURES_CONTRACT_ADDRESS ||
   '0x30200d6273e6e08B08Bd9C8f3A1A8807265B7adC';
+
+function PositionStatusCard({
+  status,
+  result,
+  timeRemaining,
+  error,
+  onReset,
+}: {
+  status: PositionStatus;
+  result: PositionResult | null;
+  timeRemaining: number | null;
+  error: string | null;
+  onReset: () => void;
+}) {
+  if (status === 'idle') return null;
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}m ${sec}s`;
+  };
+
+  const pnlNum = result ? parseInt(result.pnl) : 0;
+  const isProfit = pnlNum > 0;
+
+  return (
+    <div className={`rounded-lg border-2 p-4 mt-4 ${
+      status === 'closed' ? (isProfit ? 'border-green-400/50 bg-green-400/5' : 'border-red-400/50 bg-red-400/5') :
+      status === 'error' ? 'border-red-400/50 bg-red-400/5' :
+      'border-[#00E5FF]/30 bg-[#00E5FF]/5'
+    }`}>
+      {status === 'creating' && (
+        <p className="text-[#00E5FF] text-sm">Setting up position...</p>
+      )}
+      {status === 'transferring' && (
+        <p className="text-[#00E5FF] text-sm">Transferring collateral...</p>
+      )}
+      {status === 'active' && (
+        <p className="text-[#00E5FF] text-sm">
+          Position active — closes in {timeRemaining !== null ? formatTime(timeRemaining) : '...'}
+        </p>
+      )}
+      {status === 'closed' && result && (
+        <div className="space-y-1">
+          <p className={`text-lg font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+            PnL: {isProfit ? '+' : ''}{(pnlNum / 1e6).toFixed(4)} USDC ({result.pnlPercent}%)
+          </p>
+          <p className="text-white/60 text-xs">
+            Accuracy: {(result.accuracy * 100).toFixed(1)}% ({result.correctDirections}/{result.totalDirections})
+          </p>
+          <p className="text-white/60 text-xs">
+            Return: {(parseInt(result.returnAmount) / 1e6).toFixed(4)} USDC
+          </p>
+          <button onClick={onReset} className="mt-2 text-xs text-[#00E5FF] underline">
+            New prediction
+          </button>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="flex items-center gap-2">
+          <p className="text-red-400 text-sm">{error}</p>
+          <button onClick={onReset} className="text-xs text-white/40 underline">Retry</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Props are intentionally not used - they're passed by Next.js but we don't need them
 export default function PredictPage(_props: { params?: unknown; searchParams?: unknown }) {
@@ -83,6 +151,15 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   const [statusMessageIndex, setStatusMessageIndex] = useState(0);
   const [isOpeningPosition, setIsOpeningPosition] = useState(false);
   const yellowNonceRef = { current: 0 };
+
+  const {
+    openPosition: openDirectionalPosition,
+    status: ypPositionStatus,
+    result: positionResult,
+    timeRemaining: ypTimeRemaining,
+    error: positionError,
+    reset: resetPosition,
+  } = useOpenPosition();
 
   const { depositAddress, depositBalance, loading: yellowDepositLoading, refresh: refreshYellowDeposit } =
     useYellowDeposit(address ?? null);
@@ -257,6 +334,38 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
     }
 
     setIsOpeningPosition(true);
+
+    // Use directional-60 perps if available
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    try {
+      const healthRes = await fetch(`${backendUrl}/tickers`);
+      const healthData = await healthRes.json();
+      if (healthData.success && healthData.tickers?.includes(selectedPair?.replace('/', '') || 'BTCUSDT')) {
+        // Use new directional-60 flow
+        const ticker = selectedPair?.replace('/', '') || 'BTCUSDT';
+        const predictions = sampledPoints.map((p: { x: number; y: number }) => {
+          return minPrice + (1 - p.y / canvasHeight) * (maxPrice - minPrice);
+        });
+
+        const lev = Number(leverage);
+        const amt = Number(amount);
+        const amountStr = amt.toString();
+
+        await openDirectionalPosition({
+          ticker,
+          predictions,
+          leverage: lev,
+          amount: amountStr,
+          startTime: futureStartTime,
+          endTime: futureStartTime + totalDurationSeconds,
+        });
+
+        setIsOpeningPosition(false);
+        return; // Skip legacy flow
+      }
+    } catch {
+      // Backend not available, fall through to legacy flow
+    }
     const commitmentIds: string[] = [];
     try {
       for (let i = 0; i < offsetMinutes; i++) {
@@ -494,6 +603,13 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
           </motion.div>
         </NoiseEffect>
 
+        <PositionStatusCard
+          status={ypPositionStatus}
+          result={positionResult}
+          timeRemaining={ypTimeRemaining}
+          error={positionError}
+          onReset={resetPosition}
+        />
 
       </motion.div>
 
