@@ -31,7 +31,7 @@ import {
   erc20Abi,
 } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { hardhat } from 'viem/chains';
+import { sepolia } from 'viem/chains';
 import {
   createAuthRequestMessage,
   createAuthVerifyMessage,
@@ -53,9 +53,9 @@ import WebSocket from 'ws';
 
 // ── Config ───────────────────────────────────────────────────────────
 const YELLOW_WS_URL = process.env.YELLOW_NODE_URL || 'ws://localhost:8000/ws';
-const RPC_URL = process.env.ETHEREUM_RPC_URL || 'http://localhost:8545';
-const USDC_ADDRESS = (process.env.USDC_TOKEN || '0xbD24c53072b9693A35642412227043Ffa5fac382') as `0x${string}`;
-const YELLOW_ASSET = process.env.YELLOW_ASSET || 'yintegration.usd';
+const RPC_URL = process.env.ETHEREUM_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+const USDC_ADDRESS = (process.env.USDC_TOKEN || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238') as `0x${string}`;
+const YELLOW_ASSET = process.env.YELLOW_ASSET || 'usdc';
 const BACKEND_PRIVATE_KEY = process.env.PRIVATE_KEY as string;
 
 if (!BACKEND_PRIVATE_KEY) {
@@ -93,21 +93,21 @@ async function main() {
   log('INIT', `Backend wallet: ${backendAccount.address}`);
 
   const publicClient = createPublicClient({
-    chain: hardhat,
+    chain: sepolia,
     transport: http(RPC_URL),
   });
 
   const backendWalletClient = createWalletClient({
     account: backendAccount,
-    chain: hardhat,
+    chain: sepolia,
     transport: http(RPC_URL),
   });
 
   // ── Step 2: Fund test wallet with ETH + USDC ──────────────────────
-  log('FUND', 'Sending 0.1 ETH to test wallet...');
+  log('FUND', 'Sending 0.01 ETH to test wallet...');
   const ethTxHash = await backendWalletClient.sendTransaction({
     to: testAccount.address,
-    value: parseEther('0.1'),
+    value: parseEther('0.01'),
   });
   log('FUND', `ETH tx: ${ethTxHash}`);
   await publicClient.waitForTransactionReceipt({ hash: ethTxHash });
@@ -135,7 +135,7 @@ async function main() {
 
   const testWalletClient = createWalletClient({
     account: testAccount,
-    chain: hardhat,
+    chain: sepolia,
     transport: http(RPC_URL),
   });
 

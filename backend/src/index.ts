@@ -470,5 +470,73 @@ async function initPerps() {
     }
   });
 
+  app.post('/positions/open', async (req, res) => {
+    try {
+      const { ticker, predictions, leverage, amount, startTime, endTime, userWallet } = req.body;
+
+      // Validate
+      if (!ticker || typeof ticker !== 'string') {
+        res.status(400).json({ success: false, error: 'ticker required' });
+        return;
+      }
+      if (!Array.isArray(predictions) || predictions.length !== 60) {
+        res.status(400).json({ success: false, error: 'predictions must be array of 60' });
+        return;
+      }
+      if (!leverage || leverage < 1 || leverage > MAX_LEVERAGE) {
+        res.status(400).json({ success: false, error: `leverage must be 1-${MAX_LEVERAGE}` });
+        return;
+      }
+      if (!amount || parseInt(amount) <= 0) {
+        res.status(400).json({ success: false, error: 'amount must be positive (atomic USDC)' });
+        return;
+      }
+      const duration = endTime - startTime;
+      if (duration < MIN_POSITION_DURATION || duration > MAX_POSITION_DURATION) {
+        res.status(400).json({ success: false, error: `duration must be ${MIN_POSITION_DURATION}-${MAX_POSITION_DURATION}s` });
+        return;
+      }
+      if (!userWallet || !userWallet.startsWith('0x')) {
+        res.status(400).json({ success: false, error: 'valid userWallet required' });
+        return;
+      }
+
+      // Create app session
+      const yellowAsset = process.env.YELLOW_ASSET || 'usdc';
+      const participants = [userWallet, wallet.address];
+      const allocations = participants.map((p: string) => ({
+        participant: p, asset: yellowAsset, amount: '0',
+      }));
+
+      const { appSessionId } = await webSocketService.createAppSession(
+        participants,
+        allocations,
+        'Median App'
+      );
+
+      // Submit predictions
+      const { RPCAppStateIntent } = await import('@erc7824/nitrolite');
+      await webSocketService.submitAppState(appSessionId, allocations, RPCAppStateIntent.Operate, {
+        action: 'open',
+        positionType: 'directional-60',
+        ticker,
+        predictions,
+        leverage,
+        amount,
+        startTime,
+        endTime,
+        userWallet,
+      });
+
+      res.json({ success: true, appSessionId, backendWallet: wallet.address });
+    } catch (error) {
+      console.error('Failed to open position:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   console.log('[Perps] Initialization complete');
 }
