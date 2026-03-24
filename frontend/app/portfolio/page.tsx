@@ -17,6 +17,8 @@ import { useYellowPortfolioBalances } from '@/hooks/useYellowPortfolioBalances';
 import { useYellowPortfolioDeposit } from '@/hooks/useYellowPortfolioDeposit';
 import { useYellowPortfolioWithdraw } from '@/hooks/useYellowPortfolioWithdraw';
 import { formatUsdc, parseUsdc, getBlockExplorerUrl } from '@/lib/yellow/constants';
+import { useDepositToYellow, type DepositStep } from '@/hooks/useDepositToYellow';
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -212,6 +214,137 @@ function ActionCard({
   );
 }
 
+function StepIndicator({ step }: { step: DepositStep }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      {step.status === 'pending' && (
+        <div className="w-5 h-5 rounded-full border-2 border-white/20" />
+      )}
+      {step.status === 'active' && (
+        <motion.div
+          className="w-5 h-5 border-2 border-[#00E5FF] border-t-transparent rounded-full"
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+        />
+      )}
+      {step.status === 'complete' && (
+        <CheckCircleIcon className="w-5 h-5 text-green-400" />
+      )}
+      {step.status === 'error' && (
+        <XCircleIcon className="w-5 h-5 text-red-400" />
+      )}
+      <span className={`text-sm ${
+        step.status === 'active' ? 'text-[#00E5FF]' :
+        step.status === 'complete' ? 'text-green-400' :
+        step.status === 'error' ? 'text-red-400' :
+        'text-white/40'
+      }`}>
+        {step.label}
+        {step.txHash && (
+          <span className="ml-2 font-mono text-xs text-white/30">
+            {step.txHash.slice(0, 8)}...
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function FundYellowCard({ maxAmount }: { maxAmount: bigint }) {
+  const [inputValue, setInputValue] = useState('');
+  const { execute, steps, isRunning, error, reset } = useDepositToYellow();
+
+  const handleMax = () => setInputValue(formatUsdc(maxAmount));
+
+  const handleSubmit = async () => {
+    const parsed = parseUsdc(inputValue);
+    if (parsed <= 0n) return;
+    // Convert to human-readable for backend
+    const humanAmount = (Number(parsed) / 1e6).toString();
+    await execute(humanAmount);
+  };
+
+  const allDone = steps.every((s) => s.status === 'complete');
+
+  return (
+    <motion.div
+      variants={itemVariants}
+      className="bg-[#0a0a0a] border-2 border-[#00E5FF]/30 rounded-lg p-6 col-span-full"
+    >
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-lg bg-[#00E5FF]/10 flex items-center justify-center">
+          <ArrowDownTrayIcon className="w-5 h-5 text-[#00E5FF]" />
+        </div>
+        <h3 className="text-lg font-bold text-white uppercase tracking-wider">
+          Fund Yellow Balance
+        </h3>
+      </div>
+
+      {!isRunning && !allDone && (
+        <div className="space-y-4">
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={inputValue}
+              onChange={(e) => {
+                reset();
+                setInputValue(e.target.value.replace(/[^0-9.]/g, ''));
+              }}
+              className="w-full bg-black border-2 border-[#00E5FF]/30 rounded-lg px-4 py-3 text-white font-mono text-lg focus:border-[#00E5FF] focus:outline-none transition-colors"
+            />
+            <button
+              type="button"
+              onClick={handleMax}
+              className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-bold text-[#00E5FF] border border-[#00E5FF]/50 rounded hover:bg-[#00E5FF]/10 transition-colors"
+            >
+              MAX
+            </button>
+          </div>
+          <motion.button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!inputValue || parseUsdc(inputValue) <= 0n}
+            className="w-full py-3 bg-[#00E5FF] text-black font-bold uppercase tracking-wider rounded-lg border-2 border-black shadow-[4px_4px_0_0_#000] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            whileHover={{ x: -2, y: -2, boxShadow: '6px 6px 0 0 #000' }}
+            whileTap={{ x: 2, y: 2, boxShadow: '2px 2px 0 0 #000' }}
+          >
+            Fund Yellow Balance
+          </motion.button>
+        </div>
+      )}
+
+      {(isRunning || allDone) && (
+        <div className="space-y-1">
+          {steps.map((step) => (
+            <StepIndicator key={step.id} step={step} />
+          ))}
+          {allDone && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-green-400 text-sm mt-3 font-bold"
+            >
+              Balance available for trading!
+            </motion.p>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 flex items-center gap-2 text-sm text-red-400">
+          <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
+          <button onClick={reset} className="ml-auto text-xs underline text-white/40 hover:text-white/60">
+            Reset
+          </button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export default function PortfolioPage() {
   const { ready, authenticated, isWalletLoading } = usePrivyWallet();
   const isAuthed = ready && authenticated && !isWalletLoading;
@@ -324,6 +457,11 @@ export default function PortfolioPage() {
                     amount={offchainBalance}
                     icon={SignalIcon}
                   />
+                </div>
+
+                {/* Fund Yellow Balance */}
+                <div className="grid grid-cols-1 gap-4 mb-8">
+                  <FundYellowCard maxAmount={walletBalance} />
                 </div>
 
                 {/* Deposit / Withdraw */}
