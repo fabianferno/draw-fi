@@ -66,6 +66,9 @@ export function Header({ showStatus, statusText }: HeaderProps) {
             <Link href="/pitch" className="border-b-2 border-black text-sm font-bold text-black/80 hover:text-red-700 transition-colors">
               Pitch
             </Link>
+            <Link href="/portfolio" className="border-b-2 border-black text-sm font-bold text-black/80 hover:text-red-700 transition-colors">
+              Portfolio
+            </Link>
           </nav>
 
           {/* Right side */}

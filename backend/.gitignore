@@ -1,8 +1,6 @@
 node_modules/
 dist/
 .env
-*.log
-.DS_Store
-
-backend/positions.db-shm
-backend/positions.db
+*.db
+*.db-shm
+*.db-wal
