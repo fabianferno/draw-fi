@@ -1,26 +1,15 @@
-/**
- * App session close utility.
- * Closes an app session on Yellow Network.
- */
-import {
-  createCloseAppSessionMessage,
-  type MessageSigner,
-  type RPCAppSessionAllocation,
-} from '@erc7824/nitrolite';
-import type { Hex } from 'viem';
+import { webSocketService } from '../../lib/websockets';
 
-/**
- * Build the RPC message to close an app session.
- */
-export async function buildCloseAppSessionMessage(
-  signer: MessageSigner,
-  appSessionId: Hex,
-  allocations: RPCAppSessionAllocation[],
-  sessionData?: string
-): Promise<string> {
-  return createCloseAppSessionMessage(signer, {
-    app_session_id: appSessionId,
-    allocations,
-    session_data: sessionData,
-  });
+export interface CloseAppSessionParams {
+    appSessionId: string;
+    allocations: { participant: string; asset: string; amount: string }[];
+}
+
+export async function closeAppSession(params: CloseAppSessionParams): Promise<{ success: boolean }> {
+    const result = await webSocketService.closeAppSession(
+        params.appSessionId,
+        params.allocations
+    );
+    console.log(`App session closed: ${params.appSessionId}`);
+    return result;
 }

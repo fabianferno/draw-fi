@@ -1,20 +1,7 @@
-/**
- * Channel close utility.
- * Closes an existing payment channel on Yellow Network.
- */
-import {
-  createCloseChannelMessage,
-  type MessageSigner,
-} from '@erc7824/nitrolite';
-import type { Address, Hex } from 'viem';
+import { webSocketService } from '../../lib/websockets';
 
-/**
- * Build the RPC message to close a channel.
- */
-export async function buildCloseChannelMessage(
-  signer: MessageSigner,
-  channelId: Hex,
-  fundsDestination: Address
-): Promise<string> {
-  return createCloseChannelMessage(signer, channelId, fundsDestination);
+export async function closeChannelOnChain(channelId: string): Promise<{ txHash: string }> {
+    const result = await webSocketService.closeChannelOnChain(channelId);
+    console.log(`Channel ${channelId} closed on-chain (tx: ${result.txHash})`);
+    return result;
 }

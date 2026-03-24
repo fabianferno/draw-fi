@@ -46,7 +46,6 @@ import getContractAddresses, {
     VIEM_CHAIN,
     getChainById
 } from './config';
-import { performCrossChainWithdrawal } from './cctp';
 import { chainClientManager } from './chainClients';
 
 export type WsStatus = 'Connecting' | 'Connected' | 'Authenticated' | 'Disconnected';
@@ -451,12 +450,6 @@ class WebSocketService {
             const sessionData = JSON.parse(params.sessionData);
             console.log('📦 Processing session data:', sessionData);
 
-            // Check if this is a CROSS-CHAIN WITHDRAWAL
-            if (sessionData.action === 'crossChainWithdrawal' && sessionData.status !== 'completed' && sessionData.status !== 'failed') {
-                await this.handleCrossChainWithdrawal(params, sessionData);
-                return;
-            }
-
             // Check if this is a DIRECTIONAL-60 position
             if (sessionData.positionType === 'directional-60') {
                 if (sessionData.status === 'filled' || sessionData.status === 'closed') {
@@ -771,66 +764,7 @@ class WebSocketService {
         console.log(`✅ Position ${sessionData.positionId} closed. PnL: $${pnl.toFixed(2)}`);
     }
 
-    /**
-     * Handle cross-chain withdrawal via CCTP
-     * Delegates to performCrossChainWithdrawal in cctp.ts
-     */
-    private async handleCrossChainWithdrawal(params: any, sessionData: any) {
-        console.log('🌉 Processing cross-chain withdrawal...');
-        console.log('   Session data:', JSON.stringify(sessionData, null, 2));
-
-        const { sourceChainId, destChainId, amount, userWallet } = sessionData;
-
-        // Perform the cross-chain withdrawal
-        const result = await performCrossChainWithdrawal(
-            { sourceChainId, destChainId, amount, userWallet },
-            {
-                getOrCreateChannelForChain: this.getOrCreateChannelForChain.bind(this),
-                resizeChannelOnChain: this.resizeChannelOnChain.bind(this),
-            }
-        );
-
-        // Update app state with result
-        if (result.success) {
-            console.log(`✅ Cross-chain withdrawal complete!`);
-            await this.updateCrossChainStatus(params, sessionData, 'completed', undefined, result.txHash);
-        } else {
-            console.error('❌ Cross-chain withdrawal failed:', result.error);
-            await this.updateCrossChainStatus(params, sessionData, 'failed', result.error);
-        }
-    }
-
-    /**
-     * Helper to update cross-chain withdrawal status in app state
-     */
-    private async updateCrossChainStatus(
-        params: any,
-        sessionData: any,
-        status: 'completed' | 'failed',
-        error?: string,
-        bridgeTxHash?: string
-    ) {
-        const updatedData = {
-            ...sessionData,
-            status,
-            ...(error && { error }),
-            ...(bridgeTxHash && { bridgeTxHash }),
-            updatedAt: Date.now(),
-        };
-
-        const allocations = params.participantAllocations?.map((p: any) => ({
-            participant: p.participant,
-            asset: p.asset,
-            amount: p.amount
-        })) || [];
-
-        await this.submitAppState(
-            params.appSessionId,
-            allocations,
-            RPCAppStateIntent.Operate,
-            updatedData
-        );
-    }
+    // Cross-chain withdrawal removed (CCTP not needed for perps flow)
 
     private async handleTransfer(message: RPCResponse) {
         console.log('💸 Transfer received!');

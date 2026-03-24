@@ -1,29 +1,22 @@
-/**
- * Channel deposit utility.
- * Deposits funds into an existing channel via resize.
- */
-import {
-  createResizeChannelMessage,
-  type MessageSigner,
-} from '@erc7824/nitrolite';
-import type { Address, Hex } from 'viem';
+import { parseUnits } from 'viem';
+import { webSocketService } from '../../lib/websockets';
+import { USDC_TOKEN } from '../../lib/config';
 
-export interface DepositParams {
-  channelId: Hex;
-  amount: bigint;
-  fundsDestination: Address;
-}
+const USDC_DECIMALS = 6;
 
-/**
- * Build the RPC message to deposit (resize) a channel.
- */
-export async function buildDepositMessage(
-  signer: MessageSigner,
-  params: DepositParams
-): Promise<string> {
-  return createResizeChannelMessage(signer, {
-    channel_id: params.channelId,
-    resize_amount: params.amount,
-    funds_destination: params.fundsDestination,
-  });
+export async function depositToCustody(amount: string): Promise<string> {
+    await webSocketService.waitForAuth();
+
+    const nitroliteClient = webSocketService.getNitroliteClient();
+    if (!nitroliteClient) {
+        throw new Error('NitroliteClient not initialized');
+    }
+
+    const depositAmountInUnits = parseUnits(amount, USDC_DECIMALS);
+    console.log(`Depositing ${amount} USDC (${depositAmountInUnits} units) to custody...`);
+
+    const depositHash = await nitroliteClient.deposit(USDC_TOKEN, depositAmountInUnits);
+    console.log(`Deposit tx hash: ${depositHash}`);
+
+    return depositHash;
 }

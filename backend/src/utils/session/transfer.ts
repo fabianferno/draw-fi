@@ -1,28 +1,15 @@
-/**
- * Transfer utility.
- * Transfers funds between accounts on Yellow Network.
- */
-import {
-  createTransferMessage,
-  type MessageSigner,
-  type RPCTransferAllocation,
-} from '@erc7824/nitrolite';
-import type { Address } from 'viem';
+import { webSocketService } from '../../lib/websockets';
 
 export interface TransferParams {
-  destination: Address;
-  allocations: RPCTransferAllocation[];
+    destination: string;
+    allocations: { asset: string; amount: string }[];
 }
 
-/**
- * Build the RPC message to transfer funds.
- */
-export async function buildTransferMessage(
-  signer: MessageSigner,
-  params: TransferParams
-): Promise<string> {
-  return createTransferMessage(signer, {
-    destination: params.destination,
-    allocations: params.allocations,
-  });
+export async function transfer(params: TransferParams): Promise<{ success: boolean }> {
+    const result = await webSocketService.transfer(
+        params.destination,
+        params.allocations
+    );
+    console.log(`Transfer completed to: ${params.destination}`);
+    return result;
 }

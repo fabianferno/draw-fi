@@ -285,7 +285,8 @@ async function main() {
   // ── Step 3b: Seed Yellow balances via clearnode database ────────────
   // The integration tests use direct DB seeding to give wallets Yellow balance.
   // This bypasses the on-chain deposit/channel/resize flow.
-  const { Client } = require('pg');
+  const pg = await import('pg');
+  const { Client } = pg.default || pg;
   const pgClient = new Client({ connectionString: 'postgresql://postgres:postgres@localhost:5432/postgres' });
   await pgClient.connect();
 

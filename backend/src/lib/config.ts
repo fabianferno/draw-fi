@@ -1,3 +1,6 @@
+import { config } from 'dotenv';
+config();
+
 import { base, baseSepolia, sepolia, hardhat } from 'viem/chains';
 
 const CONFIGURED_CHAIN_ID = parseInt(process.env.CHAIN_ID || '11155111', 10);

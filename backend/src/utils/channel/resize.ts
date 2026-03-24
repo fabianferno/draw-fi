@@ -1,31 +1,27 @@
-/**
- * Channel resize utility.
- * Resizes a channel's allocation on Yellow Network.
- */
-import {
-  createResizeChannelMessage,
-  type MessageSigner,
-} from '@erc7824/nitrolite';
-import type { Address, Hex } from 'viem';
+import { parseUnits } from 'viem';
+import { webSocketService } from '../../lib/websockets';
 
-export interface ResizeParams {
-  channelId: Hex;
-  resizeAmount?: bigint;
-  allocateAmount?: bigint;
-  fundsDestination: Address;
-}
+const USDC_DECIMALS = 6;
 
-/**
- * Build the RPC message to resize a channel.
- */
-export async function buildResizeMessage(
-  signer: MessageSigner,
-  params: ResizeParams
-): Promise<string> {
-  return createResizeChannelMessage(signer, {
-    channel_id: params.channelId,
-    resize_amount: params.resizeAmount,
-    allocate_amount: params.allocateAmount,
-    funds_destination: params.fundsDestination,
-  });
+export async function resizeChannelOnChain(
+    channelId: string,
+    resizeAmount?: string,
+    allocateAmount?: string
+): Promise<{ txHash: string }> {
+    const resizeAmountBigInt = resizeAmount !== undefined
+        ? parseUnits(resizeAmount, USDC_DECIMALS)
+        : undefined;
+
+    const allocateAmountBigInt = allocateAmount !== undefined
+        ? parseUnits(allocateAmount, USDC_DECIMALS)
+        : undefined;
+
+    const result = await webSocketService.resizeChannelOnChain(
+        channelId,
+        resizeAmountBigInt,
+        allocateAmountBigInt
+    );
+
+    console.log(`Channel ${channelId} resized on-chain (tx: ${result.txHash})`);
+    return result;
 }

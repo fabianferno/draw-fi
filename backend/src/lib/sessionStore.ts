@@ -1,41 +1,40 @@
-/**
- * In-memory session store for Yellow Network session keys.
- * Tracks the session key, signer, and expiration for the authenticated session.
- */
-import type { Address, Hex } from 'viem';
-import type { MessageSigner } from '@erc7824/nitrolite';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+import { type Address } from 'viem'
 
-export interface SessionData {
-  walletAddress: Address;
-  sessionKey: Address;
-  sessionSigner: MessageSigner;
-  expiresAt: number; // unix timestamp
+export interface SessionKey {
+  privateKey: `0x${string}`
+  address: Address
 }
 
-let currentSession: SessionData | null = null;
+let sessionKeyStore: SessionKey | null = null
+let jwtStore: string | null = null
 
-export function setSession(session: SessionData): void {
-  currentSession = session;
-  console.log(`[SessionStore] Session stored for wallet ${session.walletAddress}, expires at ${session.expiresAt}`);
+export const generateSessionKey = (): SessionKey => {
+  const privateKey = generatePrivateKey()
+  const account = privateKeyToAccount(privateKey)
+  return { privateKey, address: account.address }
 }
 
-export function getSession(): SessionData | null {
-  if (!currentSession) return null;
-  // Check expiration
-  const now = Math.floor(Date.now() / 1000);
-  if (now >= currentSession.expiresAt) {
-    console.log('[SessionStore] Session expired, clearing');
-    currentSession = null;
-    return null;
-  }
-  return currentSession;
+export const getStoredSessionKey = (): SessionKey | null => {
+  return sessionKeyStore
 }
 
-export function clearSession(): void {
-  currentSession = null;
-  console.log('[SessionStore] Session cleared');
+export const storeSessionKey = (sessionKey: SessionKey): void => {
+  sessionKeyStore = sessionKey
 }
 
-export function hasValidSession(): boolean {
-  return getSession() !== null;
+export const removeSessionKey = (): void => {
+  sessionKeyStore = null
+}
+
+export const getStoredJWT = (): string | null => {
+  return jwtStore
+}
+
+export const storeJWT = (token: string): void => {
+  jwtStore = token
+}
+
+export const removeJWT = (): void => {
+  jwtStore = null
 }
