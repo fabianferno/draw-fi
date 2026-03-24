@@ -16,7 +16,7 @@ import {
   createYellowPublicClient,
   createYellowWalletClient,
 } from '@/lib/yellow/signers';
-import { getYellowWsUrl, getYellowChainId } from '@/lib/yellow/constants';
+import { getYellowWsUrl, getYellowChainId, getCustodyAddress, getAdjudicatorAddress } from '@/lib/yellow/constants';
 
 interface YellowClientState {
   client: Client | null;
@@ -113,10 +113,8 @@ export function YellowClientProvider({ children }: { children: ReactNode }) {
           walletClient,
           stateSigner,
           addresses: {
-            custody:
-              '0x0000000000000000000000000000000000000000' as `0x${string}`,
-            adjudicator:
-              '0x0000000000000000000000000000000000000000' as `0x${string}`,
+            custody: getCustodyAddress(),
+            adjudicator: getAdjudicatorAddress(),
           },
           chainId: getYellowChainId(),
           challengeDuration: 86400n, // 1 day default

@@ -58,3 +58,19 @@ export function parseUsdc(input: string): bigint {
   const n = BigInt(whole) * BigInt(10 ** USDC_DECIMALS) + BigInt(frac);
   return n < 0n ? 0n : n;
 }
+
+export function getBackendUrl(): string {
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+}
+
+export function getCustodyAddress(): `0x${string}` {
+  const addr = process.env.NEXT_PUBLIC_CUSTODY_ADDRESS;
+  if (!addr) return '0x0000000000000000000000000000000000000000' as `0x${string}`;
+  return addr as `0x${string}`;
+}
+
+export function getAdjudicatorAddress(): `0x${string}` {
+  const addr = process.env.NEXT_PUBLIC_ADJUDICATOR_ADDRESS;
+  if (!addr) return '0x0000000000000000000000000000000000000000' as `0x${string}`;
+  return addr as `0x${string}`;
+}
