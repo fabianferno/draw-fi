@@ -415,7 +415,7 @@ export function TradingChart({
             <span className="text-xs">
               {pairDisplayName}
             </span>
-            <span className="text-[#00E5FF] font-venite font-bold text-sm sm:text-base">
+            <span className="text-[#00E5FF] font-melodrame font-bold text-sm sm:text-base">
               ${currentPrice.toFixed(4)}
             </span>
           </div>

@@ -59,7 +59,7 @@ export const onboardingSteps: Tour[] = [
         icon: <PencilSquareIcon className={iconClass} />,
         title: 'Draw your prediction',
         content:
-          'Draw a line from left to right: where you think the price will go. You can pick a time horizon (1–5 min), set leverage, and amount below.',
+          'Draw a line from left to right: where you think the price will go. For now, positions resolve on a 1 minute horizon — then set leverage and amount below.',
         selector: '#onboard-draw-box',
         side: 'top',
         showControls: true,

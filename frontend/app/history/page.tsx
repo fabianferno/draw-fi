@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatEther } from 'ethers';
 import {
-  DocumentTextIcon,
   LockClosedIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
@@ -267,17 +266,13 @@ export default function HistoryPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.h1
-              className="text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4 flex items-center justify-center gap-3"
+            <h1
+              className="flex items-center justify-start gap-3 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF]"
               style={{ textShadow: '4px 4px 0 #000000' }}
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
             >
-              <DocumentTextIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" />
-              TRADE HISTORY
-              <DocumentTextIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" />
-            </motion.h1>
-            <p className="text-lg text-white/70">
+              Trade History
+            </h1>
+            <p className="text-lg text-start text-white/70">
               Your complete trading history and performance
             </p>
             {lastUpdated && (

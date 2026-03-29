@@ -180,7 +180,7 @@ export default function PitchPage() {
       {/* Back to home */}
       <Link
         href="/"
-        className="fixed top-6 left-6 z-50 font-venite text-xl text-[#00E5FF] hover:text-white transition-colors"
+        className="fixed top-6 left-6 z-50 font-melodrame text-xl text-[#00E5FF] hover:text-white transition-colors"
       >
         DRAW-FI
       </Link>
@@ -210,23 +210,23 @@ export default function PitchPage() {
             viewport={{ once: true }}
           >
             <motion.div
-              className="inline-block mb-6"
+              className="inline-block mb-2"
               variants={itemVariants}
               custom={0}
             >
               <div className="relative">
                 <div className="absolute inset-0 rounded-2xl bg-[#00E5FF]/20 blur-2xl" />
                 <h1
-                  className="relative text-7xl md:text-9xl font-venite font-bold text-[#00E5FF] tracking-[0.2em]"
-                  style={{ textShadow: '4px 4px 0 #dd0000, -2px -2px 0 #0a0a0a' }}
+                  className="relative text-7xl md:text-9xl font-melodrame font-medium text-[#00E5FF]"
+                  style={{ textShadow: '4px 4px 0 #000000' }}
                 >
-                  DRAW-FI
+                  DrawFi
                 </h1>
               </div>
             </motion.div>
 
             <motion.p
-              className="text-xl md:text-2xl text-white/70 font-light max-w-xl mx-auto mb-8"
+              className="text-xl md:text-2xl text-white/70 font-light max-w-lg mx-auto mb-8"
               variants={itemVariants}
               custom={1}
             >
@@ -271,10 +271,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-6xl font-venite font-bold text-white mb-8 leading-tight"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-8 leading-tight"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               <span className="text-red-400">95%</span> of retail traders lose money
             </motion.h2>
@@ -293,11 +293,11 @@ export default function PitchPage() {
               custom={3}
             >
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8">
-                <p className="text-5xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-3">$200B</p>
+                <p className="text-5xl md:text-6xl font-melodrame font-medium text-[#00E5FF] mb-3">$200B</p>
                 <p className="text-white/40 text-sm">Daily crypto derivatives volume</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8">
-                <p className="text-5xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-3">100M+</p>
+                <p className="text-5xl md:text-6xl font-melodrame font-medium text-[#00E5FF] mb-3">100M+</p>
                 <p className="text-white/40 text-sm">Crypto users who understand price direction but can&apos;t navigate order books</p>
               </div>
             </motion.div>
@@ -338,10 +338,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-5xl font-venite font-bold text-white mb-12"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-12"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               Three things changed
             </motion.h2>
@@ -431,10 +431,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-5xl font-venite font-bold text-white mb-4"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-4"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               Draw. Predict. <span className="text-[#00E5FF]">Earn.</span>
             </motion.h2>
@@ -537,10 +537,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-5xl font-venite font-bold text-white mb-4"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-4"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               Load-bearing <span className="text-[#00E5FF]">infrastructure</span>
             </motion.h2>
@@ -576,11 +576,10 @@ export default function PitchPage() {
               ].map((item, i) => (
                 <motion.div
                   key={item.title}
-                  className={`rounded-2xl p-6 ${
-                    item.accent
-                      ? 'border border-[#00E5FF]/30 bg-[#00E5FF]/[0.04]'
-                      : 'border border-white/10 bg-white/[0.02]'
-                  }`}
+                  className={`rounded-2xl p-6 ${item.accent
+                    ? 'border border-[#00E5FF]/30 bg-[#00E5FF]/[0.04]'
+                    : 'border border-white/10 bg-white/[0.02]'
+                    }`}
                   variants={itemVariants}
                   custom={i + 3}
                 >
@@ -637,10 +636,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-5xl font-venite font-bold text-white mb-10"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-10"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               Draw to earn in <span className="text-[#00E5FF]">60 seconds</span>
             </motion.h2>
@@ -728,10 +727,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-5xl font-venite font-bold text-white mb-10"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-10"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               Shipped & <span className="text-[#00E5FF]">shipping</span>
             </motion.h2>
@@ -817,10 +816,10 @@ export default function PitchPage() {
             </motion.p>
 
             <motion.h2
-              className="text-4xl md:text-5xl font-venite font-bold text-white mb-12"
+              className="text-4xl md:text-6xl font-melodrame font-medium text-white mb-12"
               variants={itemVariants}
               custom={1}
-              style={{ textShadow: '3px 3px 0 #000' }}
+              style={{ textShadow: '4px 4px 0 #000000' }}
             >
               The builders
             </motion.h2>
@@ -856,7 +855,7 @@ export default function PitchPage() {
                   custom={i + 2}
                 >
                   <div className="w-20 h-20 rounded-full border-2 border-[#00E5FF]/40 bg-[#00E5FF]/10 flex items-center justify-center mb-4">
-                    <span className="text-xl font-venite font-bold text-[#00E5FF]">{member.initials}</span>
+                    <span className="text-xl font-melodrame font-medium text-[#00E5FF]">{member.initials}</span>
                   </div>
                   <h3 className="text-lg font-bold text-white mb-1">{member.name}</h3>
                   <p className="text-xs font-mono text-[#00E5FF]/60 mb-3">{member.role}</p>

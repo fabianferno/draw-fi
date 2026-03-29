@@ -396,13 +396,13 @@ export default function PortfolioPage() {
             animate="visible"
           >
             {/* Title */}
-            <motion.h2
+            <motion.h1
               variants={itemVariants}
-              className="text-3xl md:text-5xl font-venite font-bold text-[#00E5FF] mb-8 uppercase tracking-wider"
+              className="flex items-center justify-start gap-3 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF] mb-8"
               style={{ textShadow: '4px 4px 0 #000000' }}
             >
               Portfolio
-            </motion.h2>
+            </motion.h1>
 
             {/* Not authenticated */}
             {!isAuthed && (

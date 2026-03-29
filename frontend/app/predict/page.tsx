@@ -65,11 +65,10 @@ function PositionStatusCard({
   const isProfit = pnlNum > 0;
 
   return (
-    <div className={`rounded-lg border-2 p-4 mt-4 ${
-      status === 'closed' ? (isProfit ? 'border-green-400/50 bg-green-400/5' : 'border-red-400/50 bg-red-400/5') :
-      status === 'error' ? 'border-red-400/50 bg-red-400/5' :
-      'border-[#00E5FF]/30 bg-[#00E5FF]/5'
-    }`}>
+    <div className={`rounded-lg border-2 p-4 mt-4 ${status === 'closed' ? (isProfit ? 'border-green-400/50 bg-green-400/5' : 'border-red-400/50 bg-red-400/5') :
+        status === 'error' ? 'border-red-400/50 bg-red-400/5' :
+          'border-[#00E5FF]/30 bg-[#00E5FF]/5'
+      }`}>
       {status === 'creating' && (
         <p className="text-[#00E5FF] text-sm">Setting up position...</p>
       )}
@@ -494,7 +493,7 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
 
   return (
 
-    <div className="text-white pb-24 relative overflow-hidden">
+    <div className="text-white pb-24 relative">
       {/* Header */}
       <Header
         showStatus={currentPoints.length > 0}
@@ -507,6 +506,23 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <motion.div
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1
+            className="flex items-center justify-start gap-3 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF]"
+            style={{ textShadow: '4px 4px 0 #000000' }}
+          >
+            Predict
+          </h1>
+          <p className="text-lg text-start text-white/70">
+            Draw your curve on the live chart and open a position.
+          </p>
+        </motion.div>
+
         {/* Token Pair Selector */}
         <motion.section
           id="onboard-token-pair"
@@ -585,23 +601,22 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
 
 
         {/* Pattern Drawing Box */}
-        <NoiseEffect opacity={0.5} className="">
-          <motion.div
-            id="onboard-draw-box"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <PatternDrawingBox
-              onPatternComplete={handlePatternComplete}
-              amount={amount}
-              leverage={leverage}
-              onAmountChange={(amt: number) => setAmount(amt)}
-              onLeverageChange={(lev) => setLeverage(lev)}
-              isOpeningPosition={isOpeningPosition}
-            />
-          </motion.div>
-        </NoiseEffect>
+        <motion.div
+          id="onboard-draw-box"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <PatternDrawingBox
+            onPatternComplete={handlePatternComplete}
+            amount={amount}
+            leverage={leverage}
+            onAmountChange={(amt: number) => setAmount(amt)}
+            onLeverageChange={(lev) => setLeverage(lev)}
+            isOpeningPosition={isOpeningPosition}
+          />
+        </motion.div>
+
 
         <PositionStatusCard
           status={ypPositionStatus}

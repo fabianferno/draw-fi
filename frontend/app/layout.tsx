@@ -2,13 +2,54 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ProvidersWrapper } from "@/components/providers-wrapper";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  title: "Draw-Fi — Draw your futures",
-  description: "A trading game where predictions are expressed as drawings, not orders. Draw your price prediction and trade your market intuition.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "DrawFi — Draw your futures",
+    template: "%s · DrawFi",
+  },
+  description:
+    "Draw your BTC curve on a live chart, stake small, settle in 60 seconds. Gasless opens on Base via Yellow Network—no order book, no liquidations maze.",
+  keywords: [
+    "DrawFi",
+    "crypto futures",
+    "Yellow Network",
+    "Base",
+    "derivatives",
+    "prediction trading",
+    "chart trading",
+  ],
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: "DrawFi",
+    title: "DrawFi — Draw your futures",
+    description:
+      "Turn chart intuition into a 60-second game: draw your curve, gasless stakes on Base with Yellow Network.",
+    images: [
+      {
+        url: "/slides/draw-fi-logo.png",
+        alt: "DrawFi",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DrawFi — Draw your futures",
+    description:
+      "Draw your price curve on live charts. Micro-stakes, fast settlement, gasless opens on Base.",
+    images: ["/slides/draw-fi-logo.png"],
   },
 };
 
@@ -22,7 +63,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#00E5FF" />
       </head>
       <body className="antialiased  bg-[#0a0a0a] font-sans">
         <ProvidersWrapper>
