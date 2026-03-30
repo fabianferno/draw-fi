@@ -64,7 +64,7 @@ export default function Home() {
                   style={{ textShadow: '4px 4px 0 #000000' }}
                   variants={itemVariants}
                 >
-                  DrawFi
+                  Draw.Fi
                 </motion.h1>
               </motion.div>
               <motion.p
@@ -163,7 +163,7 @@ export default function Home() {
           </section>
 
           {/* How It Works Section */}
-          <section className="relative bg-[#0a0a0a]/80 backdrop-blur-xl py-12 sm:py-16 md:py-24 px-4 border-y-4 border-[#00E5FF]">
+          <section className="max-w-7xl mx-auto relative bg-[#0a0a0a]/80 backdrop-blur-xl py-12 sm:py-16 md:py-24 px-4 border-y border-[#00E5FF]">
             <motion.div
               className="mx-auto max-w-6xl"
               initial={{ opacity: 0 }}

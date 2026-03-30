@@ -4,7 +4,7 @@ import { ProvidersWrapper } from "@/components/providers-wrapper";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://draw-fi.vercel.app");
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -39,8 +39,10 @@ export const metadata: Metadata = {
       "Turn chart intuition into a 60-second game: draw your curve, gasless stakes on Base with Yellow Network.",
     images: [
       {
-        url: "/slides/draw-fi-logo.png",
-        alt: "DrawFi",
+        url: "/banner.png",
+        width: 2560,
+        height: 1366,
+        alt: "DrawFi — draw your curve on live charts, futures on Base with Yellow Network",
       },
     ],
   },
@@ -49,7 +51,7 @@ export const metadata: Metadata = {
     title: "DrawFi — Draw your futures",
     description:
       "Draw your price curve on live charts. Micro-stakes, fast settlement, gasless opens on Base.",
-    images: ["/slides/draw-fi-logo.png"],
+    images: ["/banner.png"],
   },
 };
 

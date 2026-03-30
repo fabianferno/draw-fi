@@ -1,0 +1,88 @@
+<h2>Chart Style Direction</h2>
+<p class="subtitle">Confirmed: Clean trading terminal aesthetic</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">New TradingChart Design</div>
+    <div class="mockup-body" style="background:#0a0f1a;padding:0;overflow:hidden;">
+      <!-- Top info bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#2a2d3a;display:flex;align-items:center;justify-content:center;font-size:14px;">ETH</div>
+          <div>
+            <div style="color:#f0b90b;font-size:22px;font-weight:700;font-family:monospace;">2,042.344</div>
+          </div>
+          <div style="color:rgba(255,255,255,0.5);font-size:11px;line-height:1.5;">
+            <div><span style="color:rgba(255,255,255,0.7);">ETH</span> &middot; Ethereum</div>
+            <div>24h Vol: <span style="color:#fff;">54.1M</span> &middot; H: <span style="color:#22c55e;">2,085.22</span> &middot; L: <span style="color:#ef4444;">1,936.75</span></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="padding:4px 12px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:rgba(255,255,255,0.6);font-size:12px;">Tick</div>
+          <div style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:14px;">&#9881;</div>
+        </div>
+      </div>
+
+      <!-- Chart area -->
+      <div style="position:relative;height:280px;padding:20px 60px 30px 16px;">
+        <!-- Price axis (right) -->
+        <div style="position:absolute;right:0;top:20px;bottom:30px;width:55px;display:flex;flex-direction:column;justify-content:space-between;padding:0 8px;">
+          <span style="color:rgba(255,255,255,0.3);font-size:10px;font-family:monospace;">2,043.75</span>
+          <span style="color:rgba(255,255,255,0.3);font-size:10px;font-family:monospace;">2,043.00</span>
+          <span style="color:rgba(255,255,255,0.3);font-size:10px;font-family:monospace;">2,042.25</span>
+          <span style="color:rgba(255,255,255,0.3);font-size:10px;font-family:monospace;">2,041.50</span>
+        </div>
+
+        <!-- Grid lines -->
+        <svg style="position:absolute;left:16px;right:55px;top:20px;bottom:30px;width:calc(100% - 71px);height:calc(100% - 50px);">
+          <line x1="0" y1="25%" x2="100%" y2="25%" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="0" y1="75%" x2="100%" y2="75%" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+
+          <!-- Orange price line -->
+          <polyline fill="none" stroke="#f0a030" stroke-width="2" stroke-linejoin="round"
+            points="0,30 30,28 60,32 90,30 120,34 150,55 180,70 210,68 240,72 270,65 300,78 330,90 360,85 390,80 420,75 430,72 440,70 450,68 460,66 470,64"/>
+
+          <!-- Dark gradient fill below line -->
+          <polygon fill="url(#grad)" opacity="0.3"
+            points="0,30 30,28 60,32 90,30 120,34 150,55 180,70 210,68 240,72 270,65 300,78 330,90 360,85 390,80 420,75 430,72 440,70 450,68 460,66 470,64 470,100 0,100"/>
+          <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0a030" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#f0a030" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Current price dashed line -->
+          <line x1="0" y1="64%" x2="100%" y2="64%" stroke="#22c55e" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+
+          <!-- Live dot -->
+          <circle cx="470" cy="64" r="4" fill="#00E5FF"/>
+        </svg>
+
+        <!-- Green price badge -->
+        <div style="position:absolute;right:0;top:calc(64% - 2px);background:#22c55e;color:#000;font-size:11px;font-weight:700;font-family:monospace;padding:2px 8px;border-radius:3px;">2,042.34</div>
+
+        <!-- Time axis -->
+        <div style="position:absolute;bottom:0;left:16px;right:55px;display:flex;justify-content:space-between;">
+          <span style="color:rgba(255,255,255,0.25);font-size:10px;font-family:monospace;">23:50:56</span>
+          <span style="color:rgba(255,255,255,0.25);font-size:10px;font-family:monospace;">23:51:08</span>
+          <span style="color:rgba(255,255,255,0.25);font-size:10px;font-family:monospace;">23:51:20</span>
+          <span style="color:rgba(255,255,255,0.25);font-size:10px;font-family:monospace;">23:51:32</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>Key Elements</h3>
+  <ul style="color:rgba(255,255,255,0.7);font-size:14px;line-height:2;">
+    <li><span style="color:#f0a030;">&#9632;</span> Orange line chart with subtle gradient fill</li>
+    <li><span style="color:#22c55e;">&#9632;</span> Green dashed current-price crosshair + badge</li>
+    <li><span style="color:#00E5FF;">&#9679;</span> Cyan live dot at tip</li>
+    <li>Token icon + price + 24h stats in top bar</li>
+    <li>Dark navy background, minimal grid</li>
+    <li>No NyanCat, no rainbow, no glow effects</li>
+  </ul>
+</div>

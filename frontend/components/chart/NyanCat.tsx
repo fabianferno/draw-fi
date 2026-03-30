@@ -74,13 +74,69 @@ export function RainbowPathTrail({ points, catX, strokeWidth = 14 }: RainbowPath
   
   if (trailPoints.length < 2) return null;
 
-  // Create SVG path from points
-  const pathD = trailPoints.reduce((acc, point, index) => {
-    if (index === 0) {
-      return `M ${point.x} ${point.y}`;
+  // Create smooth SVG path using monotone cubic interpolation
+  // This matches the smooth curve that lightweight-charts renders for the area series
+  const pathD = (() => {
+    if (trailPoints.length < 2) return '';
+    if (trailPoints.length === 2) {
+      return `M ${trailPoints[0].x} ${trailPoints[0].y} L ${trailPoints[1].x} ${trailPoints[1].y}`;
     }
-    return `${acc} L ${point.x} ${point.y}`;
-  }, '');
+
+    // Compute tangents using monotone method (prevents overshoot)
+    const n = trailPoints.length;
+    const dx: number[] = [];
+    const dy: number[] = [];
+    const slopes: number[] = [];
+    const tangents: number[] = new Array(n);
+
+    for (let i = 0; i < n - 1; i++) {
+      dx.push(trailPoints[i + 1].x - trailPoints[i].x);
+      dy.push(trailPoints[i + 1].y - trailPoints[i].y);
+      slopes.push(dx[i] === 0 ? 0 : dy[i] / dx[i]);
+    }
+
+    // Endpoints
+    tangents[0] = slopes[0];
+    tangents[n - 1] = slopes[n - 2];
+
+    // Interior points: average of adjacent slopes, zeroed if signs differ
+    for (let i = 1; i < n - 1; i++) {
+      if (slopes[i - 1] * slopes[i] <= 0) {
+        tangents[i] = 0;
+      } else {
+        tangents[i] = (slopes[i - 1] + slopes[i]) / 2;
+      }
+    }
+
+    // Monotonicity constraint
+    for (let i = 0; i < n - 1; i++) {
+      if (Math.abs(slopes[i]) < 1e-10) {
+        tangents[i] = 0;
+        tangents[i + 1] = 0;
+      } else {
+        const alpha = tangents[i] / slopes[i];
+        const beta = tangents[i + 1] / slopes[i];
+        const s = alpha * alpha + beta * beta;
+        if (s > 9) {
+          const t = 3 / Math.sqrt(s);
+          tangents[i] = t * alpha * slopes[i];
+          tangents[i + 1] = t * beta * slopes[i];
+        }
+      }
+    }
+
+    // Build path with cubic Bezier segments
+    let d = `M ${trailPoints[0].x} ${trailPoints[0].y}`;
+    for (let i = 0; i < n - 1; i++) {
+      const segDx = dx[i] / 3;
+      const cp1x = trailPoints[i].x + segDx;
+      const cp1y = trailPoints[i].y + tangents[i] * segDx;
+      const cp2x = trailPoints[i + 1].x - segDx;
+      const cp2y = trailPoints[i + 1].y - tangents[i + 1] * segDx;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${trailPoints[i + 1].x} ${trailPoints[i + 1].y}`;
+    }
+    return d;
+  })();
 
   // Rainbow colors from top to bottom (like original Nyan Cat)
   const rainbowColors = [

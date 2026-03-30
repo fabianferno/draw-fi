@@ -54,29 +54,29 @@ export function Header({ showStatus, statusText }: HeaderProps) {
                     className="relative font-melodrame text-3xl font-medium text-white"
                     whileHover={{ scale: 1.02 }}
                   >
-                    DrawFi
+                    Draw.Fi
                   </motion.h1>
-                  <span className="text-[10px] -mt-1 font-bold text-white uppercase tracking-wider">
-                    Draw Your Futures
+                  <span className="text-[10px] -mt-2 text-white uppercase">
+                    Futures, Trade, Play
                   </span>
                 </div>
               </Link>
 
               {/* Navigation */}
-              <nav className="hidden sm:flex items-center md:gap-10 gap-4 uppercase">
-                <Link href="/predict" className=" text-sm font-bold text-white/80 hover:text-cyan-500 transition-colors">
+              <nav className="hidden sm:flex items-center md:gap-10 gap-4">
+                <Link href="/predict" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
                   Play
                 </Link>
-                <Link href="/leaderboard" className=" text-sm font-bold text-white/80 hover:text-cyan-500 transition-colors">
+                <Link href="/leaderboard" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
                   Leaderboard
                 </Link>
-                <Link href="/history" className=" text-sm font-bold text-white/80 hover:text-cyan-500 transition-colors">
+                <Link href="/history" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
                   History
                 </Link>
-                <Link href="/pitch" className=" text-sm font-bold text-white/80 hover:text-cyan-500 transition-colors">
+                <Link href="/pitch" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
                   Pitch
                 </Link>
-                <Link href="/portfolio" className=" text-sm font-bold text-white/80 hover:text-cyan-500 transition-colors">
+                <Link href="/portfolio" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
                   Portfolio
                 </Link>
               </nav>
