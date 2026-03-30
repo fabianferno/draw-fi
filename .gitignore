@@ -55,4 +55,4 @@ tsconfig.tsbuildinfo
 # Test coverage
 coverage
 
-backend/.pnpm-store/
+backend/.pnpm-store/.superpowers/
