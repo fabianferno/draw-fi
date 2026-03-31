@@ -7,7 +7,8 @@ type Action =
   | { type: 'ADD_PRICE'; payload: PricePoint }
   | { type: 'ERROR'; payload: Error }
   | { type: 'LOADING' }
-  | { type: 'CONNECTED' };
+  | { type: 'CONNECTED' }
+  | { type: 'RESET' };
 
 const initialState: PriceDataState = {
   data: [],
@@ -37,6 +38,8 @@ function priceDataReducer(state: PriceDataState, action: Action): PriceDataState
       const trimmedData = newData.length > MAX_POINTS ? newData.slice(-MAX_POINTS) : newData;
       return { data: trimmedData, isLoading: false, error: null };
     }
+    case 'RESET':
+      return initialState;
     case 'ERROR':
       return { ...state, isLoading: false, error: action.payload };
     default:
@@ -52,6 +55,9 @@ export function usePriceData(tickerSymbol: string = 'BTCUSDT') {
   const currentTickerRef = useRef<string>(tickerSymbol);
 
   useEffect(() => {
+    // Clear old data when ticker changes
+    dispatch({ type: 'RESET' });
+
     isMountedRef.current = true;
     currentTickerRef.current = tickerSymbol;
 
