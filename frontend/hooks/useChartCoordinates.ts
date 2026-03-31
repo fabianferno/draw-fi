@@ -29,8 +29,16 @@ export function useChartCoordinates(opts: {
       ? priceData[priceData.length - 1].time
       : Math.floor(Date.now() / 1000);
 
-    // Time range: latest point sits at 80% of width
-    const visibleDuration = width / barSpacing;
+    // Time range: fit to actual data, with 20% future space for predictions
+    // barSpacing acts as a zoom multiplier (higher = more zoomed in)
+    const dataSpan = priceData.length > 1
+      ? priceData[priceData.length - 1].time - priceData[0].time
+      : 120;
+    const minDuration = 30; // At least 30 seconds visible
+    const baseDuration = Math.max(dataSpan, minDuration);
+    // Apply zoom: barSpacing > 3 zooms in, < 3 zooms out
+    const zoomFactor = 3 / barSpacing;
+    const visibleDuration = baseDuration * zoomFactor;
     const futureSpace = visibleDuration * 0.2;
     const start = now - (visibleDuration - futureSpace);
     const end = now + futureSpace;
