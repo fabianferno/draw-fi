@@ -86,6 +86,9 @@ export function TokenPairProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSelectedPair = async (symbol: string) => {
+    // Update locally immediately so the UI responds even if backend is down
+    setSelectedPairState(symbol);
+
     try {
       const response = await fetch(`${BACKEND_URL}/api/token-pairs/select`, {
         method: 'POST',
@@ -96,13 +99,11 @@ export function TokenPairProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to select pair');
+        console.warn('Backend pair selection failed, using local state');
       }
-
-      setSelectedPairState(symbol);
     } catch (error) {
-      console.error('Failed to select pair:', error);
-      throw error;
+      // Backend unavailable — pair still works locally via Bybit WebSocket
+      console.warn('Backend unavailable for pair selection:', error);
     }
   };
 

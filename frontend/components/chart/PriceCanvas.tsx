@@ -115,9 +115,9 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
         ctx.lineWidth = 6;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.35;
         ctx.shadowColor = LINE_COLOR;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 24;
         ctx.stroke();
         ctx.restore();
 
