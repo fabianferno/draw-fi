@@ -16,15 +16,17 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo and branding */}
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Draw-Fi Logo"
-              width={40}
-              height={40}
-              style={{ imageRendering: 'pixelated' }}
-            />
+            <div className="overflow-hidden rounded-lg bg-black">
+              <Image
+                src="/slides/draw-fi-logo.png"
+                alt="Draw-Fi"
+                width={48}
+                height={48}
+                className="h-10 w-10 object-cover"
+              />
+            </div>
             <div>
-              <h3 className="text-[#00E5FF] font-bold text-lg tracking-wider">DRAW-FI</h3>
+              <h3 className="font-melodrame text-xl font-medium text-[#00E5FF]">DrawFi</h3>
               <p className="text-[#00E5FF]/60 text-xs">Draw Your Futures</p>
             </div>
           </div>

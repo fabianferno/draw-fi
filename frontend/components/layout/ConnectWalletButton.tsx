@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Wallet } from 'lucide-react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 
 function formatAddress(address: string) {
@@ -53,13 +54,13 @@ export function ConnectWalletButton() {
         style={{ imageRendering: 'pixelated' }}
       >
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded border-2 border-[#00E5FF] bg-[#00E5FF] flex items-center justify-center">
-            <motion.div
-              className="w-2 h-2 rounded-sm bg-[#000000]"
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ repeat: Infinity, duration: 1 }}
-            />
-          </div>
+          <motion.span
+            className="inline-flex shrink-0 text-[#00E5FF]"
+            animate={{ opacity: [1, 0.5, 1] }}
+            transition={{ repeat: Infinity, duration: 1 }}
+          >
+            <Wallet className="w-5 h-5" strokeWidth={2.25} aria-hidden />
+          </motion.span>
           <span className="text-xs sm:text-sm">Creating wallet...</span>
         </div>
       </motion.button>
@@ -85,9 +86,7 @@ export function ConnectWalletButton() {
         style={{ imageRendering: 'pixelated' }}
       >
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded border-2 border-[#000000] bg-[#000000] flex items-center justify-center">
-            <div className="w-2 h-2 rounded-sm bg-[#00E5FF]" />
-          </div>
+          <Wallet className="w-5 h-5 shrink-0 text-[#000000]" strokeWidth={2.25} aria-hidden />
           <span>Connect</span>
         </div>
       </motion.button>
@@ -113,14 +112,12 @@ export function ConnectWalletButton() {
         style={{ imageRendering: 'pixelated' }}
       >
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded border-2 border-[#00E5FF] bg-[#00E5FF] flex items-center justify-center">
-            <div className="w-2 h-2 rounded-sm bg-[#000000]" />
-          </div>
+          <Wallet className="w-5 h-5 shrink-0 text-[#00E5FF]" strokeWidth={2.25} aria-hidden />
           <div className="text-start">
             <span className="text-xs sm:text-sm">
               {address ? formatAddress(address) : 'Connected'}
             </span>
-            <div className="text-[10px] text-white font-venite">
+            <div className="text-[10px] text-white font-sans">
               Privy Wallet
             </div>
           </div>

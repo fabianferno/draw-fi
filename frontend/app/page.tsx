@@ -5,12 +5,10 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   PencilSquareIcon,
-  ChartBarIcon,
-  CurrencyDollarIcon,
+  BoltIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
-import { NoiseEffect } from "@/components/ui/NoiseEffect";
 import { Header, Footer } from "@/components/layout";
-import ColorBlends from "@/components/ColorBlends";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -34,12 +32,9 @@ const itemVariants = {
 
 export default function Home() {
   return (
-    <NoiseEffect opacity={1} className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <div className="relative flex flex-col min-h-screen">
-        {/* Header */}
-        <div className="relative z-20">
-          <Header />
-        </div>
+        <Header />
 
 
 
@@ -47,23 +42,6 @@ export default function Home() {
         <div className="relative z-10 flex-1">
           {/* Hero Section */}
           <section className="relative flex min-h-[70vh] flex-col md:flex-row items-center justify-center px-4 sm:px-8 md:px-14 py-8 md:py-12 text-start gap-8 md:gap-0 overflow-hidden">
-            {/* Animated color blends background */}
-            <div className="absolute inset-0 z-0 opacity-30">
-              <ColorBlends
-                colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
-                rotation={0}
-                speed={0.2}
-                scale={1}
-                frequency={1}
-                warpStrength={1}
-                mouseInfluence={1}
-                parallax={0.5}
-                noise={0.1}
-                transparent
-                autoRotate={0}
-                className="absolute inset-0 w-full h-full"
-              />
-            </div>
             {/* Cyan gradient radial - light, bottom */}
             <div
               className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none z-1"
@@ -79,28 +57,36 @@ export default function Home() {
               animate="visible"
             >
               <motion.div
-                className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8"
+                className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-2"
               >
                 <motion.h1
-                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-venite leading-tight tracking-[0.2em] text-[#00E5FF] drop-shadow-lg text-center sm:text-left"
+                  className="text-4xl md:text-9xl font-melodrame font-medium text-[#00E5FF] text-center sm:text-left"
+                  style={{ textShadow: '4px 4px 0 #000000' }}
                   variants={itemVariants}
-                  style={{ textShadow: '4px 4px 0 #dd0000, -2px -2px 0 #0a0a0a' }}
                 >
-                  DRAW-FI
+                  Draw.Fi
                 </motion.h1>
               </motion.div>
               <motion.p
-                className="mt-6 md:mt-10 text-lg sm:text-xl md:text-2xl font-bold text-white drop-shadow-md text-center md:text-left"
+                className="text-lg sm:text-xl md:text-2xl font-bold text-white drop-shadow-md text-center md:text-left"
                 variants={itemVariants}
               >
-                We&apos;ve invented a new way to trade futures. <br /> <span className="text-[#00E5FF]">Draw your futures.</span>
+                For everyone who reads charts but won&apos;t touch an order book.{" "}
+                <span className="text-[#00E5FF]">Draw your curve. Get scored in 60 seconds.</span>
               </motion.p>
 
               <motion.p
                 className="text-sm sm:text-base md:text-md leading-relaxed text-white/80 text-center md:text-left"
                 variants={itemVariants}
               >
-                is a gamified, derivatives trading platform built on the Yellow network. A gas-free, instant futures trading game where users draw price predictions instead of placing orders.
+                DrawFi turns your sketch into a position: live BTC (and more) charts, micro-stakes from about $0.10, and leverage up to 2500x—settled against real price, no liquidations maze. Built on Base with Yellow Network for gasless opens (EIP-712 signatures, off-chain USDC balance)—so you deposit once and keep drawing.
+              </motion.p>
+
+              <motion.p
+                className="text-xs sm:text-sm text-[#00E5FF]/90 text-center md:text-left font-medium tracking-wide uppercase"
+                variants={itemVariants}
+              >
+                Live on Base · Yellow Network · Leaderboard &amp; history
               </motion.p>
 
               <motion.div
@@ -150,7 +136,7 @@ export default function Home() {
             >
               <Image
                 src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2RraWV0aW8zcmJ6amhqeHM4ZzljNWNtcWw0OHdoM2QzYTBwN3Q2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/QsbWUyoB7YTO4ectTS/giphy.gif"
-                alt="Hero Image"
+                alt="Animated hero graphic for DrawFi"
                 width={500}
                 height={500}
                 className="w-full max-w-[500px] sm:max-w-[500px] md:w-[500px] h-auto md:h-[500px] object-contain filter hue-rotate-240"
@@ -158,8 +144,26 @@ export default function Home() {
             </motion.div>
           </section>
 
+          {/* Why + problem / solution (conversion strip) */}
+          <section className="relative px-4 py-10 sm:py-12 md:py-14 bg-[#000000]/40 border-y border-[#00E5FF]/30">
+            <motion.div
+              className="mx-auto max-w-4xl text-center space-y-4"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="font-melodrame text-2xl sm:text-3xl md:text-4xl text-[#00E5FF]" style={{ textShadow: "3px 3px 0 #000000" }}>
+                Why DrawFi exists
+              </h2>
+              <p className="text-sm sm:text-base text-white/85 leading-relaxed">
+                Most perp tools are built for desks, not humans—order books, margin, and gas keep chart-literate users on the sidelines. DrawFi sits between heavy DEXs and binary prediction markets: express direction by drawing, stake small, and get a clear win/loss from real price in one minute.
+              </p>
+            </motion.div>
+          </section>
+
           {/* How It Works Section */}
-          <section className="relative bg-[#0a0a0a]/80 backdrop-blur-xl py-12 sm:py-16 md:py-24 px-4 border-y-4 border-[#00E5FF]">
+          <section className="max-w-7xl mx-auto relative bg-[#0a0a0a]/80 backdrop-blur-xl py-12 sm:py-16 md:py-24 px-4 border-y border-[#00E5FF]">
             <motion.div
               className="mx-auto max-w-6xl"
               initial={{ opacity: 0 }}
@@ -168,34 +172,37 @@ export default function Home() {
               transition={{ duration: 0.6 }}
             >
               <motion.h2
-                className="text-center font-venite text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-[#00E5FF] mb-8 sm:mb-10 md:mb-12 px-4"
+                className="text-center font-melodrame text-4xl md:text-6xl font-medium text-[#00E5FF] mb-3 sm:mb-4 md:mb-6 px-4"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                style={{ textShadow: '3px 3px 0 #000000' }}
+                style={{ textShadow: '4px 4px 0 #000000' }}
               >
-                How It Works?
+                How it works
               </motion.h2>
+              <p className="text-center text-sm sm:text-base text-white/70 max-w-2xl mx-auto mb-8 sm:mb-10 md:mb-12 px-4">
+                Three steps from sketch to settlement—no order tickets, no gas on every open.
+              </p>
 
               <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                 {[
                   {
                     num: "1",
-                    title: "Draw Your Prediction",
-                    desc: "You're shown a live market chart. Draw a path or curve representing your expected price trajectory over a fixed future horizon.",
+                    title: "Draw on the live chart",
+                    desc: "Open Predict, watch the candle stream (e.g. from Bybit), and trace where you think price goes before the window ends. Your line is your conviction—no bids and asks.",
                     Icon: PencilSquareIcon,
                   },
                   {
                     num: "2",
-                    title: "Continuous Futures Position",
-                    desc: "Your gesture is captured as a continuous curve, normalized to the chart's time and price scale, and interpolated using piecewise linear interpolation or cubic splines.",
-                    Icon: ChartBarIcon,
+                    title: "Stake and sign (gasless)",
+                    desc: "Choose stake and leverage. Yellow Network keeps USDC in custody on Base; you sign EIP-712 messages so opens can run without a gas popup. Micro-positions stay economical.",
+                    Icon: BoltIcon,
                   },
                   {
                     num: "3",
-                    title: "Calculate PnL",
-                    desc: "The curve is interpreted as a continuous futures position where slope and deviation from the start price determine exposure, and PnL is computed via a discrete continuous-time PnL model.",
-                    Icon: CurrencyDollarIcon,
+                    title: "Settle in 60 seconds",
+                    desc: "We score dozens of directional checks against real ticks. Above about 50% accuracy you are in the green; below, you are not—simple, fast, and tied to actual market movement.",
+                    Icon: ClockIcon,
                   },
                 ].map((item, i) => {
                   const Icon = item.Icon;
@@ -229,24 +236,7 @@ export default function Home() {
           </section>
 
           {/* CTA Section */}
-          <section className="relative overflow-hidden py-12 sm:py-16 md:py-24 px-4">
-            <div className="absolute inset-0 z-0">
-              <ColorBlends
-                colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
-                rotation={0}
-                speed={0.2}
-                scale={1}
-                frequency={1}
-                warpStrength={1}
-                mouseInfluence={1}
-                parallax={0.5}
-                noise={0.1}
-                transparent
-                autoRotate={0}
-                className="absolute inset-0 w-full h-full"
-              />
-            </div>
-            <div className="absolute inset-0 z-1 bg-[#000000]/60 backdrop-blur-sm pointer-events-none" aria-hidden />
+          <section className="relative overflow-hidden py-12 sm:py-16 md:py-24 px-4 bg-[#0a0a0a]/80">
             <motion.div
               className="relative z-10 mx-auto max-w-3xl text-center"
               initial={{ opacity: 0, y: 30 }}
@@ -254,13 +244,13 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <motion.h2
-                className="mb-6 sm:mb-8 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-venite font-bold text-[#00E5FF] px-4"
-                style={{ textShadow: '3px 3px 0 #0a0a0a' }}
+                className="mb-2 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF] px-4"
+                style={{ textShadow: '4px 4px 0 #000000' }}
               >
-                Ready to trade convictions?
+                Ready in one minute?
               </motion.h2>
-              <p className="mb-8 sm:mb-12 text-base sm:text-lg md:text-xl text-white/80 px-4">
-                Draw your prediction curve and turn your market intuition into trading decisions.
+              <p className="mb-8 sm:mb-12 max-w-xl mx-auto text-base sm:text-lg md:text-xl text-white/80 px-4">
+                Connect, draw your curve, sign once—see how your intuition stacks up on the leaderboard.
               </p>
               <motion.div
                 whileHover={{ scale: 1.05, x: -3, y: -3 }}
@@ -286,6 +276,6 @@ export default function Home() {
           <Footer />
         </div>
       </div>
-    </NoiseEffect >
+    </div>
   );
 }

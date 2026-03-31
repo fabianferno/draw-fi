@@ -56,3 +56,4 @@ tsconfig.tsbuildinfo
 coverage
 
 backend/.pnpm-store/
+.superpowers/

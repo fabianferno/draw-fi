@@ -398,17 +398,13 @@ export default function LeaderboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.h1
-              className="flex items-center justify-center gap-3 text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4"
+            <h1
+              className="flex items-center justify-start gap-3 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF]"
               style={{ textShadow: '4px 4px 0 #000000' }}
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
             >
-              <TrophyIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" aria-hidden />
-              LEADERBOARD
-              <TrophyIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" aria-hidden />
-            </motion.h1>
-            <p className="text-lg text-white/70">
+              Leaderboard
+            </h1>
+            <p className="text-lg text-start text-white/70">
               Top traders competing to draw the best futures
             </p>
             {lastUpdated && (

@@ -7,36 +7,16 @@ type Action =
   | { type: 'ADD_PRICE'; payload: PricePoint }
   | { type: 'ERROR'; payload: Error }
   | { type: 'LOADING' }
-  | { type: 'CONNECTED' };
-
-// Generate dummy historical data
-function generateDummyHistory(): PricePoint[] {
-  const history: PricePoint[] = [];
-  const now = Math.floor(Date.now() / 1000);
-  const basePrice = 0.98;
-  
-  // Generate 2 minutes of historical data (120 seconds)
-  // One point every 2 seconds for smoother display
-  for (let i = 120; i >= 0; i -= 2) {
-    const timestamp = now - i;
-    // Add some realistic price variation around 0.98
-    const variation = (Math.sin(i / 20) * 0.01) + (Math.random() - 0.5) * 0.005;
-    const price = basePrice + variation;
-    
-    history.push({
-      time: timestamp,
-      value: Math.max(0.95, Math.min(1.01, price)), // Keep within reasonable range
-    });
-  }
-  
-  return history;
-}
+  | { type: 'CONNECTED' }
+  | { type: 'RESET' };
 
 const initialState: PriceDataState = {
-  data: generateDummyHistory(), // Start with dummy history
+  data: [],
   isLoading: true,
   error: null,
 };
+
+const MAX_POINTS = 300; // ~5 minutes at 1 tick/sec
 
 function priceDataReducer(state: PriceDataState, action: Action): PriceDataState {
   switch (action.type) {
@@ -45,12 +25,21 @@ function priceDataReducer(state: PriceDataState, action: Action): PriceDataState
     case 'CONNECTED':
       return { ...state, isLoading: false, error: null };
     case 'ADD_PRICE': {
-      const newData = [...state.data, action.payload];
-      // Keep 2 minutes of history (120 seconds, assuming ~1 point per second)
-      const maxPoints = 120; // Keep 2 minutes of history
-      const trimmedData = newData.length > maxPoints ? newData.slice(-maxPoints) : newData;
+      // Deduplicate: if the last point has the same timestamp, replace it
+      // instead of pushing a new one (Bybit sends multiple ticks/sec)
+      const lastIdx = state.data.length - 1;
+      let newData: PricePoint[];
+      if (lastIdx >= 0 && state.data[lastIdx].time === action.payload.time) {
+        newData = [...state.data];
+        newData[lastIdx] = action.payload;
+      } else {
+        newData = [...state.data, action.payload];
+      }
+      const trimmedData = newData.length > MAX_POINTS ? newData.slice(-MAX_POINTS) : newData;
       return { data: trimmedData, isLoading: false, error: null };
     }
+    case 'RESET':
+      return initialState;
     case 'ERROR':
       return { ...state, isLoading: false, error: action.payload };
     default:
@@ -66,6 +55,9 @@ export function usePriceData(tickerSymbol: string = 'BTCUSDT') {
   const currentTickerRef = useRef<string>(tickerSymbol);
 
   useEffect(() => {
+    // Clear old data when ticker changes
+    dispatch({ type: 'RESET' });
+
     isMountedRef.current = true;
     currentTickerRef.current = tickerSymbol;
 

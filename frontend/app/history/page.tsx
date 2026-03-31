@@ -4,14 +4,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatEther } from 'ethers';
 import {
-  DocumentTextIcon,
   LockClosedIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
   StarIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { Header, Footer } from '@/components/layout';
+import { Header, Footer, ConnectWalletButton } from '@/components/layout';
 import { NoiseEffect } from '@/components/ui/NoiseEffect';
 import { getClosedPositions, getUserStats } from '@/lib/api/leaderboard';
 import { getOpenPositionsForUser } from '@/lib/api/positions';
@@ -41,7 +40,7 @@ const itemVariants = {
 };
 
 export default function HistoryPage() {
-  const { ready, authenticated, address, isWalletLoading, login } = usePrivyWallet();
+  const { ready, authenticated, address, isWalletLoading } = usePrivyWallet();
   const isConnected = ready && authenticated && !!address && !isWalletLoading;
   const [sortBy, setSortBy] = useState<SortBy>('timestamp');
   const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
@@ -267,17 +266,13 @@ export default function HistoryPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.h1
-              className="text-4xl md:text-6xl font-venite font-bold text-[#00E5FF] mb-4 flex items-center justify-center gap-3"
+            <h1
+              className="flex items-center justify-start gap-3 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF]"
               style={{ textShadow: '4px 4px 0 #000000' }}
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
             >
-              <DocumentTextIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" />
-              TRADE HISTORY
-              <DocumentTextIcon className="w-10 h-10 md:w-14 md:h-14 shrink-0" />
-            </motion.h1>
-            <p className="text-lg text-white/70">
+              Trade History
+            </h1>
+            <p className="text-lg text-start text-white/70">
               Your complete trading history and performance
             </p>
             {lastUpdated && (
@@ -302,29 +297,7 @@ export default function HistoryPage() {
                     <p className="text-white/60">Connect your wallet to view your trade history</p>
                   </div>
                 </div>
-                <motion.button
-                  onClick={login}
-                  type="button"
-                  className="relative group px-4 py-2.5 bg-[#00E5FF] border-3 border-[#0a0a0a] rounded-lg font-bold text-[#000000] uppercase tracking-wider text-sm shadow-[4px_4px_0_0_#0a0a0a] transition-all"
-                  whileHover={{
-                    x: -2,
-                    y: -2,
-                    boxShadow: '6px 6px 0 0 #0a0a0a',
-                  }}
-                  whileTap={{
-                    x: 2,
-                    y: 2,
-                    boxShadow: '2px 2px 0 0 #0a0a0a',
-                  }}
-                  style={{ imageRendering: 'pixelated' }}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded border-2 border-[#000000] bg-[#000000] flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-sm bg-[#00E5FF]" />
-                    </div>
-                    <span>Connect</span>
-                  </div>
-                </motion.button>
+                <ConnectWalletButton />
               </div>
             </motion.div>
           )}

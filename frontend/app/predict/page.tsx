@@ -1,8 +1,8 @@
+// frontend/app/predict/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BrowserProvider, Contract, formatEther } from 'ethers';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNextStep } from 'nextstepjs';
 import { TradingChart } from '@/components/chart/TradingChart';
 import { PatternDrawingBox } from '@/components/chart/PatternDrawingBox';
@@ -10,40 +10,90 @@ import { usePredictionDrawing } from '@/hooks/usePredictionDrawing';
 import { usePriceData } from '@/hooks/usePriceData';
 import { useTokenPair } from '@/contexts/TokenPairContext';
 import { TokenPairSelector } from '@/components/TokenPairSelector';
-import {
-  samplePredictionPoints,
-  uploadSampledPredictionPoints,
-} from '@/lib/prediction/samplePredictionPoints';
+import { samplePredictionPoints } from '@/lib/prediction/samplePredictionPoints';
 import { Header, BottomControls } from '@/components/layout';
-import { NoiseEffect } from '@/components/ui/NoiseEffect';
 import { usePrivyWallet } from '@/hooks/usePrivyWallet';
 import { useYellowDeposit } from '@/hooks/useYellow';
-import { openPositionWithYellowBalance } from '@/lib/api/yellow';
-import { signFundPosition } from '@/lib/yellow/relayer';
-import { usdcToEthWei, getMinUsdcAmount } from '@/lib/yellow/usdcConversion';
 import { predictTourId } from '@/lib/onboarding/predictTourSteps';
+import { useOpenPosition, type PositionStatus, type PositionResult } from '@/hooks/useOpenPosition';
 
 const ONBOARDING_SEEN_KEY = 'drawfi-predict-onboarding-seen';
 
 export const dynamic = 'force-dynamic';
 
-const LINE_FUTURES_ABI = [
-  'function openPosition(uint16 _leverage, string _predictionCommitmentId) external payable returns (uint256)',
-  'function batchOpenPositions(uint16 _leverage, string[] _predictionCommitmentIds) external payable returns (uint256[])',
-  'function canClosePosition(uint256 _positionId) external view returns (bool)',
-  'function getPosition(uint256 _positionId) external view returns (tuple(address user,uint256 amount,uint16 leverage,uint256 openTimestamp,string predictionCommitmentId,bool isOpen,int256 pnl,string actualPriceCommitmentId,uint256 closeTimestamp))',
-  'event PositionOpened(uint256 indexed positionId, address indexed user, uint256 amount, uint16 leverage, uint256 timestamp, string predictionCommitmentId)',
-];
+function PositionStatusCard({
+  status,
+  result,
+  timeRemaining,
+  error,
+  onReset,
+}: {
+  status: PositionStatus;
+  result: PositionResult | null;
+  timeRemaining: number | null;
+  error: string | null;
+  onReset: () => void;
+}) {
+  if (status === 'idle') return null;
 
-const DEFAULT_FUTURES_CONTRACT_ADDRESS =
-  process.env.NEXT_PUBLIC_FUTURES_CONTRACT_ADDRESS ||
-  '0x30200d6273e6e08B08Bd9C8f3A1A8807265B7adC';
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}m ${sec}s`;
+  };
 
-// Props are intentionally not used - they're passed by Next.js but we don't need them
-export default function PredictPage(_props: { params?: unknown; searchParams?: unknown }) {
-  const { ready, authenticated, address, isWalletLoading, getSigner } = usePrivyWallet();
+  const pnlNum = result ? parseInt(result.pnl) : 0;
+  const isProfit = pnlNum > 0;
+
+  return (
+    <div className={`rounded-lg border-2 p-4 mt-4 ${
+      status === 'closed'
+        ? (isProfit ? 'border-green-400/50 bg-green-400/5' : 'border-red-400/50 bg-red-400/5')
+        : status === 'error'
+          ? 'border-red-400/50 bg-red-400/5'
+          : 'border-[#00E5FF]/30 bg-[#00E5FF]/5'
+    }`}>
+      {status === 'creating' && (
+        <p className="text-[#00E5FF] text-sm">Setting up position...</p>
+      )}
+      {status === 'transferring' && (
+        <p className="text-[#00E5FF] text-sm">Transferring collateral...</p>
+      )}
+      {status === 'active' && (
+        <p className="text-[#00E5FF] text-sm">
+          Position active — closes in {timeRemaining !== null ? formatTime(timeRemaining) : '...'}
+        </p>
+      )}
+      {status === 'closed' && result && (
+        <div className="space-y-1">
+          <p className={`text-lg font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+            PnL: {isProfit ? '+' : ''}{(pnlNum / 1e6).toFixed(4)} USDC ({result.pnlPercent}%)
+          </p>
+          <p className="text-white/60 text-xs">
+            Accuracy: {(result.accuracy * 100).toFixed(1)}% ({result.correctDirections}/{result.totalDirections})
+          </p>
+          <p className="text-white/60 text-xs">
+            Return: {(parseInt(result.returnAmount) / 1e6).toFixed(4)} USDC
+          </p>
+          <button onClick={onReset} className="mt-2 text-xs text-[#00E5FF] underline">
+            New prediction
+          </button>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="flex items-center gap-2">
+          <p className="text-red-400 text-sm">{error}</p>
+          <button onClick={onReset} className="text-xs text-white/40 underline">Retry</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function PredictPage() {
+  const { ready, authenticated, address, isWalletLoading } = usePrivyWallet();
   const isConnected = ready && authenticated && !!address && !isWalletLoading;
-  const { selectedPair } = useTokenPair();
+  const { selectedPair, availablePairs } = useTokenPair();
   const { startNextStep, isNextStepVisible } = useNextStep();
 
   // Show onboarding tour the first time user visits the predict page
@@ -56,7 +106,6 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
   }, [startNextStep, isNextStepVisible]);
 
   const {
-    isDrawing,
     currentPoints,
     startDrawing,
     addPoint,
@@ -66,144 +115,32 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
 
   const { data: priceData } = usePriceData(selectedPair);
 
-  // When token pair changes, clear prediction state so chart shows only the new pair
-  useEffect(() => {
-    clearPrediction();
-    setSelectedMinute(null);
-  }, [selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps -- only run when pair changes
-
-  const [barSpacing, setBarSpacing] = useState(3);
   const [selectedMinute, setSelectedMinute] = useState<number | null>(null);
-  const [amount, setAmount] = useState<number>(1); // USDC
+  const [amount, setAmount] = useState<number>(1);
   const [leverage, setLeverage] = useState<number>(500);
-  const [positionIds, setPositionIds] = useState<number[]>([]);
-  const [positionStatus, setPositionStatus] = useState<'idle' | 'trading' | 'awaiting_settlement' | 'closed'>('idle');
-  const [batchPnL, setBatchPnL] = useState<number | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [statusMessageIndex, setStatusMessageIndex] = useState(0);
   const [isOpeningPosition, setIsOpeningPosition] = useState(false);
-  const yellowNonceRef = { current: 0 };
+
+  const {
+    openPosition: openDirectionalPosition,
+    status: positionStatus,
+    result: positionResult,
+    timeRemaining,
+    error: positionError,
+    reset: resetPosition,
+  } = useOpenPosition();
 
   const { depositAddress, depositBalance, loading: yellowDepositLoading, refresh: refreshYellowDeposit } =
     useYellowDeposit(address ?? null);
 
+  // When token pair changes, clear prediction state
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (positionIds.length === 0) return;
-
-    const ethereum = (window as unknown as { ethereum?: unknown }).ethereum;
-    if (!ethereum) return;
-
-    let cancelled = false;
-    let intervalId: number | null = null;
-
-    const provider = new BrowserProvider(ethereum as any);
-    const contract = new Contract(
-      DEFAULT_FUTURES_CONTRACT_ADDRESS,
-      LINE_FUTURES_ABI,
-      provider,
-    );
-
-    const tradingMessages = ['Trading...', 'Future booming...', 'Position active...'] as const;
-
-    const poll = async () => {
-      if (cancelled) return;
-      try {
-        const nowSec = Math.floor(Date.now() / 1000);
-        let anyOpen = false;
-        let anyAwaiting = false;
-        let minRemaining: number | null = null;
-        let totalClosedPnlWei = BigInt(0);
-        let fetchedCount = 0;
-
-        for (const pid of positionIds) {
-          let position: Awaited<ReturnType<typeof contract.getPosition>>;
-          try {
-            position = await contract.getPosition(pid);
-          } catch (getErr: unknown) {
-            // Position may not exist on this chain/contract yet (e.g. wrong network or contract address)
-            const msg = getErr instanceof Error ? getErr.message : String(getErr);
-            if (msg.includes('BAD_DATA') || msg.includes('0x')) {
-              console.warn(
-                'Position not found on contract (wrong network or contract?). Ensure wallet is on the same network as the relayer.',
-                { positionId: pid }
-              );
-            } else {
-              console.warn('Error fetching position', pid, getErr);
-            }
-            continue;
-          }
-
-          fetchedCount += 1;
-          if (position.isOpen) {
-            anyOpen = true;
-            const openTimestampSec = Number(position.openTimestamp?.toString?.() ?? position.openTimestamp);
-            const closeAt = openTimestampSec + 60;
-            const remaining = closeAt - nowSec;
-            if (minRemaining === null || remaining < minRemaining) {
-              minRemaining = remaining;
-            }
-            try {
-              const canClose: boolean = await contract.canClosePosition(pid);
-              if (canClose) {
-                anyAwaiting = true;
-              }
-            } catch {
-              // canClose can revert for same reasons; ignore
-            }
-          } else {
-            const pnlWei = BigInt(position.pnl.toString());
-            totalClosedPnlWei += pnlWei;
-          }
-        }
-
-        // Only update status when we successfully read at least one position
-        if (fetchedCount === 0) {
-          return;
-        }
-
-        setBatchPnL(Number(formatEther(totalClosedPnlWei)));
-
-        if (anyOpen) {
-          setPositionStatus(anyAwaiting ? 'awaiting_settlement' : 'trading');
-          setTimeRemaining(minRemaining !== null && minRemaining > 0 ? minRemaining : 0);
-        } else {
-          setPositionStatus('closed');
-          setTimeRemaining(0);
-          if (intervalId !== null) {
-            clearInterval(intervalId);
-          }
-        }
-
-        setStatusMessageIndex(prev => (prev + 1) % tradingMessages.length);
-      } catch (err) {
-        console.error('Error polling position status', err);
-      }
-    };
-
-    // Initial poll
-    poll();
-    intervalId = window.setInterval(poll, 3000);
-
-    return () => {
-      cancelled = true;
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [positionIds]);
+    clearPrediction();
+    setSelectedMinute(null);
+  }, [selectedPair]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClear = () => {
     clearPrediction();
     setSelectedMinute(null);
-  };
-
-  const handleZoomIn = () => {
-    setBarSpacing(prev => Math.min(prev + 0.5, 10));
-  };
-
-  const handleZoomOut = () => {
-    setBarSpacing(prev => Math.max(prev - 0.5, 0.1));
   };
 
   const handlePatternComplete = async (
@@ -211,163 +148,67 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
     offsetMinutes: number,
   ) => {
     if (!priceData || priceData.length === 0) {
-      alert('Price data is still loading. Please wait for the chart to connect and try again.');
+      alert('Price data is still loading. Please wait and try again.');
       return;
     }
-    if (points.length === 0) {
-      alert('Please draw a pattern with at least 2 points before pulling the lever.');
+    if (points.length < 2) {
+      alert('Please draw a pattern with at least 2 points.');
       return;
     }
-
-    const currentPrice = priceData[priceData.length - 1].value;
-
-    const canvasWidth = 600;
-    const canvasHeight = 300;
-
-    const priceRange = currentPrice * 0.05;
-    const minPrice = currentPrice - priceRange;
-    const maxPrice = currentPrice + priceRange;
-
-    const nowInSeconds = Math.floor(Date.now() / 1000);
-    // Start drawing immediately from current second (position starts at current timestamp)
-    const futureStartTime = nowInSeconds;
-    const totalDurationSeconds = offsetMinutes * 60;
-
-    let sampledPoints: Array<{ x: number; y: number }>;
-    try {
-      sampledPoints = samplePredictionPoints(points, 60);
-      console.log('sampled prediction canvas points (60):', sampledPoints);
-    } catch (err) {
-      const message =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: unknown }).message)
-          : 'Not enough points to sample the required number of predictions';
-      console.error('sampling error:', err);
-      alert(
-        message.includes('Not enough points')
-          ? 'Please draw a longer pattern so we can sample at least 60 points.'
-          : `Error sampling prediction points: ${message}`,
-      );
-      return;
-    }
-
     if (!isConnected || !address) {
       alert('Please connect your wallet to open a position.');
       return;
     }
 
     setIsOpeningPosition(true);
-    const commitmentIds: string[] = [];
-    try {
-      for (let i = 0; i < offsetMinutes; i++) {
-        const { commitmentId } = await uploadSampledPredictionPoints({
-          points,
-          userAddress: address,
-          desiredCount: 60,
-        });
-        console.log(`prediction commitment from backend [${i}]:`, commitmentId);
-        commitmentIds.push(commitmentId);
-      }
-    } catch (err) {
-      console.error('failed to upload sampled prediction points', err);
-      const message =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: unknown }).message)
-          : 'Prediction upload failed';
-      alert(`Error uploading predictions: ${message}`);
-      return;
-    }
-
-    const lev = Number(leverage);
-    if (!Number.isFinite(lev) || lev < 1 || lev > 2500) {
-      alert('Leverage must be between 1 and 2500');
-      return;
-    }
-    const amt = Number(amount);
-    const minUsdc = getMinUsdcAmount();
-    if (!Number.isFinite(amt) || amt < minUsdc) {
-      alert(`Amount must be at least ${minUsdc.toFixed(2)} USDC to open a position.`);
-      return;
-    }
-
-    const signer = await getSigner();
-    if (!signer) {
-      alert('No signer available. Please reconnect your wallet.');
-      return;
-    }
 
     try {
-      const valueWei = usdcToEthWei(amt);
-      const openedIds: number[] = [];
+      const currentPrice = priceData[priceData.length - 1].value;
+      const canvasHeight = 170; // PatternDrawingBox canvas height
 
-      for (let i = 0; i < commitmentIds.length; i++) {
-        try {
-          const commitmentId = commitmentIds[i];
-          if (!commitmentId?.trim()) continue;
-          const deadline = Math.floor(Date.now() / 1000) + 300;
-          const nonce = ++yellowNonceRef.current;
-          const signature = await signFundPosition(signer, {
-            userAddress: address,
-            amountWei: valueWei,
-            leverage: lev,
-            commitmentId,
-            nonce: BigInt(nonce),
-            deadline: BigInt(deadline),
-          });
-          const result = await openPositionWithYellowBalance({
-            userAddress: address,
-            amountWei: valueWei.toString(),
-            leverage: lev,
-            commitmentId,
-            signature,
-            nonce,
-            deadline,
-          });
-          openedIds.push(result.positionId);
-        } catch (err) {
-          console.error('Yellow position failed', err);
-          const message = err instanceof Error ? err.message : 'Failed to open position';
-          const isFundingUnavailable =
-            message.includes('not available') ||
-            message.includes('not enabled') ||
-            message.includes('disabled') ||
-            message.includes('relayer');
-          const isAmountBelowMin =
-            message.includes('amount below minimum') || message.includes('below contract minimum');
-          const friendlyMessage = isFundingUnavailable
-            ? "Pay with Yellow balance isn't enabled on this server. Try opening with wallet ETH instead, or ask the operator to enable the Yellow relayer."
-            : isAmountBelowMin
-              ? `Position amount is below minimum. Please use at least ${minUsdc.toFixed(2)} USDC.`
-              : message;
-          alert(`Error: ${friendlyMessage}`);
-          if (openedIds.length === 0) return;
-          break;
-        }
+      // Sample/interpolate to 60 points
+      let sampledPoints: Array<{ x: number; y: number }>;
+      try {
+        sampledPoints = samplePredictionPoints(points, 60);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Sampling failed';
+        alert(message.includes('Not enough') || message.includes('draw at least')
+          ? 'Please draw a longer pattern.'
+          : `Error: ${message}`);
+        return;
       }
 
-      if (openedIds.length > 0) {
-        setPositionIds(openedIds);
-        setPositionStatus('trading');
-        setTimeRemaining(60);
-        setBatchPnL(null);
-        refreshYellowDeposit();
-      }
+      // Map canvas Y → price predictions
+      const priceRange = currentPrice * 0.05;
+      const minPrice = currentPrice - priceRange;
+      const maxPrice = currentPrice + priceRange;
+      const predictions = sampledPoints.map(p =>
+        minPrice + (1 - p.y / canvasHeight) * (maxPrice - minPrice)
+      );
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const totalDurationSeconds = offsetMinutes * 60;
+      const ticker = selectedPair?.replace('/', '') || 'BTCUSDT';
+
+      await openDirectionalPosition({
+        ticker,
+        predictions,
+        leverage: Number(leverage),
+        amount: amount.toString(),
+        startTime: nowSec,
+        endTime: nowSec + totalDurationSeconds,
+      });
+
+      // Inject prediction points onto the chart
+      const canvasWidth = points.length > 0
+        ? Math.max(...points.map(p => p.x))
+        : 600;
 
       const predictionPoints = sampledPoints.map((point) => {
-        const normalizedX = point.x / canvasWidth;
-        const time = futureStartTime + normalizedX * totalDurationSeconds;
-
-        const normalizedY = point.y / canvasHeight;
-        const price = maxPrice - (normalizedY * (maxPrice - minPrice));
-
-        return {
-          x: 0,
-          y: 0,
-          time: Math.floor(time),
-          price,
-          canvasX: point.x,
-          canvasY: point.y,
-        };
+        const normalizedX = point.x / (canvasWidth || 1);
+        const time = nowSec + normalizedX * totalDurationSeconds;
+        const price = minPrice + (1 - point.y / canvasHeight) * (maxPrice - minPrice);
+        return { x: 0, y: 0, time: Math.floor(time), price };
       });
 
       clearPrediction();
@@ -383,21 +224,41 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
     }
   };
 
-  return (
+  // Find display name for current pair
+  const currentPairInfo = availablePairs.find(p => p.symbol === selectedPair);
+  const pairDisplay = currentPairInfo?.display || selectedPair;
+  const isPositionActive = positionStatus === 'active' || positionStatus === 'creating' || positionStatus === 'transferring';
 
-    <div className="text-white pb-24 relative overflow-hidden">
-      {/* Header */}
+  return (
+    <div className="text-white pb-24 relative">
       <Header
         showStatus={currentPoints.length > 0}
         statusText={selectedMinute ? `+${selectedMinute}m` : undefined}
       />
 
       <motion.div
-        className="relative z-10 px-3 py-4 sm:px-4 sm:py-6 mb-20 max-w-7xl mx-auto space-y-2"
+        className="relative z-10 px-3 py-4 sm:px-4 sm:py-6 mb-20 max-w-7xl mx-auto space-y-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <motion.div
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1
+            className="flex items-center justify-start gap-3 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF]"
+            style={{ textShadow: '4px 4px 0 #000000' }}
+          >
+            Predict
+          </h1>
+          <p className="text-lg text-start text-white/70">
+            Draw your curve on the live chart and open a position.
+          </p>
+        </motion.div>
+
         {/* Token Pair Selector */}
         <motion.section
           id="onboard-token-pair"
@@ -421,99 +282,64 @@ export default function PredictPage(_props: { params?: unknown; searchParams?: u
           </div>
         </motion.section>
 
-        {/* Main Chart Card - Nyan style */}
-        <NoiseEffect opacity={0.7} className="">
-          <motion.div
-            id="onboard-chart"
-            className="relative group"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            {/* Glow effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#00E5FF] via-[#000000] to-[#00E5FF] rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse" />
-
-            <div className="relative bg-[#0a0a0a] rounded-2xl border-4 border-[#00E5FF] p-3 sm:p-4 overflow-hidden shadow-[6px_6px_0_0_#000000]">
-              {/* Subtle inner glow */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#000000]/20 to-transparent pointer-events-none" />
-
-              {/* Drawing Indicator */}
-              <AnimatePresence>
-                {isDrawing && (
-                  <motion.div
-                    className="absolute top-3 right-3 z-20 flex items-center gap-2 px-3 py-1.5 bg-[#00E5FF] rounded-full shadow-[2px_2px_0_0_#000000]"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                  >
-                    <motion.div
-                      className="w-1.5 h-1.5 rounded-full bg-[#000000]"
-                      animate={{ scale: [1, 1.5, 1] }}
-                      transition={{ repeat: Infinity, duration: 0.5 }}
-                    />
-                    <span className="text-[11px] font-bold text-[#000000] uppercase tracking-wider">Live</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <TradingChart
-                key={selectedPair}
-                isDark={true}
-                isDrawing={isDrawing}
-                isConfirmed={false}
-                currentPoints={currentPoints}
-                selectedMinute={selectedMinute}
-                onStartDrawing={startDrawing}
-                onAddPoint={addPoint}
-                onFinishDrawing={finishDrawing}
-                barSpacing={barSpacing}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-              />
-            </div>
-          </motion.div>
-        </NoiseEffect>
-
+        {/* Trading Chart */}
+        <motion.div
+          id="onboard-chart"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <TradingChart
+            key={selectedPair}
+            priceData={priceData}
+            predictionPoints={currentPoints}
+            isPositionActive={isPositionActive}
+            pairSymbol={selectedPair}
+            pairDisplay={pairDisplay}
+          />
+        </motion.div>
 
         {/* Pattern Drawing Box */}
-        <NoiseEffect opacity={0.5} className="">
-          <motion.div
-            id="onboard-draw-box"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <PatternDrawingBox
-              onPatternComplete={handlePatternComplete}
-              amount={amount}
-              leverage={leverage}
-              onAmountChange={(amt: number) => setAmount(amt)}
-              onLeverageChange={(lev) => setLeverage(lev)}
-              isOpeningPosition={isOpeningPosition}
-            />
-          </motion.div>
-        </NoiseEffect>
+        <motion.div
+          id="onboard-draw-box"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <PatternDrawingBox
+            onPatternComplete={handlePatternComplete}
+            amount={amount}
+            leverage={leverage}
+            onAmountChange={(amt: number) => setAmount(amt)}
+            onLeverageChange={(lev) => setLeverage(lev)}
+            isOpeningPosition={isOpeningPosition}
+          />
+        </motion.div>
 
-
+        <PositionStatusCard
+          status={positionStatus}
+          result={positionResult}
+          timeRemaining={timeRemaining}
+          error={positionError}
+          onReset={resetPosition}
+        />
       </motion.div>
 
-      {/* Bottom Controls (status: Opening/Trading/Settlement/PnL shown in right slot) */}
       <BottomControls
         selectedMinute={selectedMinute}
         hasPoints={currentPoints.length > 0}
         onClear={handleClear}
         isConnected={isConnected}
-        batchPnL={batchPnL}
+        batchPnL={null}
         yellowDepositBalance={depositBalance}
         yellowDepositLoading={yellowDepositLoading}
         depositAddress={depositAddress}
         onRefreshDeposit={refreshYellowDeposit}
         isOpeningPosition={isOpeningPosition}
-        positionStatus={positionStatus}
-        statusMessageIndex={statusMessageIndex}
-        timeRemaining={timeRemaining}
+        positionStatus={'idle'}
+        statusMessageIndex={0}
+        timeRemaining={null}
       />
     </div>
-
   );
 }
