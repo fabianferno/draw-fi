@@ -88,28 +88,28 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
       );
 
       if (visibleData.length > 1) {
+        // Convert to pixel coordinates
+        const pts = visibleData.map(d => ({
+          x: timeToX(d.time),
+          y: priceToY(d.value),
+        }));
+
         // Area fill
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, 'rgba(240,160,48,0.3)');
         gradient.addColorStop(1, 'rgba(240,160,48,0)');
 
         ctx.beginPath();
-        ctx.moveTo(timeToX(visibleData[0].time), priceToY(visibleData[0].value));
-        for (let i = 1; i < visibleData.length; i++) {
-          ctx.lineTo(timeToX(visibleData[i].time), priceToY(visibleData[i].value));
-        }
-        ctx.lineTo(timeToX(visibleData[visibleData.length - 1].time), h);
-        ctx.lineTo(timeToX(visibleData[0].time), h);
+        smoothPath(ctx, pts);
+        ctx.lineTo(pts[pts.length - 1].x, h);
+        ctx.lineTo(pts[0].x, h);
         ctx.closePath();
         ctx.fillStyle = gradient;
         ctx.fill();
 
         // Price line
         ctx.beginPath();
-        ctx.moveTo(timeToX(visibleData[0].time), priceToY(visibleData[0].value));
-        for (let i = 1; i < visibleData.length; i++) {
-          ctx.lineTo(timeToX(visibleData[i].time), priceToY(visibleData[i].value));
-        }
+        smoothPath(ctx, pts);
         ctx.strokeStyle = LINE_COLOR;
         ctx.lineWidth = LINE_WIDTH;
         ctx.lineJoin = 'round';
@@ -177,6 +177,38 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
 }
 
 // --- Helpers ---
+
+/**
+ * Draw a smooth cubic bezier spline through the given points.
+ * Uses Catmull-Rom → cubic bezier conversion for C1 continuity.
+ */
+function smoothPath(
+  ctx: CanvasRenderingContext2D,
+  pts: Array<{ x: number; y: number }>,
+) {
+  if (pts.length === 0) return;
+  ctx.moveTo(pts[0].x, pts[0].y);
+  if (pts.length === 1) return;
+  if (pts.length === 2) {
+    ctx.lineTo(pts[1].x, pts[1].y);
+    return;
+  }
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(i - 1, 0)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(i + 2, pts.length - 1)];
+
+    // Catmull-Rom tangents scaled to 1/6 for cubic bezier control points
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+  }
+}
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
