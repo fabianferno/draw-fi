@@ -79,6 +79,11 @@ export function ChartContainer({
           />
         </>
       )}
+      {priceData.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-white/30 text-sm font-mono">Connecting to price feed...</p>
+        </div>
+      )}
     </div>
   );
 }

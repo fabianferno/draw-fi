@@ -29,27 +29,26 @@ export function useChartCoordinates(opts: {
       ? priceData[priceData.length - 1].time
       : Math.floor(Date.now() / 1000);
 
-    // Time range: fit to actual data, with 20% future space for predictions
-    // barSpacing acts as a zoom multiplier (higher = more zoomed in)
+    // Time range: fit to actual data with 20% future space for predictions
+    // Clamp start to earliest data point so we never show empty space on the left
+    const dataStart = priceData.length > 0 ? priceData[0].time : now - 60;
     const dataSpan = priceData.length > 1
-      ? priceData[priceData.length - 1].time - priceData[0].time
-      : 120;
-    const minDuration = 30; // At least 30 seconds visible
+      ? now - dataStart
+      : 60; // default 60s window when we have 0-1 points
+    const minDuration = 30;
     const baseDuration = Math.max(dataSpan, minDuration);
-    // Apply zoom: barSpacing > 3 zooms in, < 3 zooms out
+    // barSpacing as zoom: >3 zooms in, <3 zooms out
     const zoomFactor = 3 / barSpacing;
     const visibleDuration = baseDuration * zoomFactor;
     const futureSpace = visibleDuration * 0.2;
-    const start = now - (visibleDuration - futureSpace);
+    // Never start before earliest data point
+    const rawStart = now - (visibleDuration - futureSpace);
+    const start = Math.max(rawStart, dataStart - 2); // 2s padding before first point
     const end = now + futureSpace;
 
-    // Price range: auto-fit to visible data with 10% padding
-    const visiblePoints = priceData.filter(p => p.time >= start && p.time <= end);
+    // Price range: auto-fit to ALL data (not just visible) to avoid jumpy Y-axis
     let minPrice: number, maxPrice: number;
-    if (visiblePoints.length > 0) {
-      minPrice = Math.min(...visiblePoints.map(p => p.value));
-      maxPrice = Math.max(...visiblePoints.map(p => p.value));
-    } else if (priceData.length > 0) {
+    if (priceData.length > 0) {
       minPrice = Math.min(...priceData.map(p => p.value));
       maxPrice = Math.max(...priceData.map(p => p.value));
     } else {
@@ -57,8 +56,18 @@ export function useChartCoordinates(opts: {
       maxPrice = 100;
     }
 
-    const priceSpan = maxPrice - minPrice || 1;
-    const padding = priceSpan * 0.1;
+    // When we have very little price movement (e.g. first few ticks), ensure
+    // a minimum visible range so movements are obvious from the start
+    const priceSpan = maxPrice - minPrice;
+    const minVisibleRange = (minPrice + maxPrice) / 2 * 0.0005; // 0.05% of mid price
+    if (priceSpan < minVisibleRange) {
+      const mid = (minPrice + maxPrice) / 2;
+      minPrice = mid - minVisibleRange / 2;
+      maxPrice = mid + minVisibleRange / 2;
+    }
+
+    const finalSpan = maxPrice - minPrice || 1;
+    const padding = finalSpan * 0.1;
     minPrice -= padding;
     maxPrice += padding;
 
