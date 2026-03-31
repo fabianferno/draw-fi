@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SlotMachineLeverButton } from '@/components/ui/SlotMachineLever';
 import { NoiseEffect } from '../ui/NoiseEffect';
 
-const NEON_COLOR = '#00E5FF';
+const DRAW_COLOR = '#f0a030';
 
 const LEVERAGE_OPTIONS = [100, 200, 500, 1000, 1500, 2000, 2500] as const;
 
@@ -70,8 +70,8 @@ export function PatternDrawingBox({
     if (!ctx || !canvas) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = NEON_COLOR;
-    ctx.shadowColor = NEON_COLOR;
+    ctx.fillStyle = DRAW_COLOR;
+    ctx.shadowColor = DRAW_COLOR;
     ctx.shadowBlur = 20;
     ctx.beginPath();
     ctx.arc(coords.x, coords.y, 4, 0, 2 * Math.PI);
@@ -95,11 +95,11 @@ export function PatternDrawingBox({
 
     if (points.length > 0) {
       const lastPoint = points[points.length - 1];
-      ctx.strokeStyle = NEON_COLOR;
+      ctx.strokeStyle = DRAW_COLOR;
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.shadowColor = NEON_COLOR;
+      ctx.shadowColor = DRAW_COLOR;
       ctx.shadowBlur = 20;
       ctx.beginPath();
       ctx.moveTo(lastPoint.x, lastPoint.y);
@@ -118,8 +118,8 @@ export function PatternDrawingBox({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (pointsToDraw.length === 1) {
-      ctx.fillStyle = NEON_COLOR;
-      ctx.shadowColor = NEON_COLOR;
+      ctx.fillStyle = DRAW_COLOR;
+      ctx.shadowColor = DRAW_COLOR;
       ctx.shadowBlur = 20;
       ctx.beginPath();
       ctx.arc(pointsToDraw[0].x, pointsToDraw[0].y, 4, 0, 2 * Math.PI);
@@ -128,11 +128,11 @@ export function PatternDrawingBox({
     }
 
     // Draw path
-    ctx.strokeStyle = NEON_COLOR;
+    ctx.strokeStyle = DRAW_COLOR;
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowColor = NEON_COLOR;
+    ctx.shadowColor = DRAW_COLOR;
     ctx.shadowBlur = 20;
 
     ctx.beginPath();
@@ -332,10 +332,7 @@ export function PatternDrawingBox({
           `,
         }}
       />
-      {/* Glow effect */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-[#00E5FF] via-[#000000] to-[#00E5FF] rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse" />
-
-      <div className="relative bg-[#0a0a0a] rounded-2xl border-4 border-[#00E5FF] p-3 sm:p-4 shadow-[6px_6px_0_0_#000000]">
+      <div className="relative bg-[#0a0f1a] rounded-2xl border border-white/8 p-3 sm:p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h3
@@ -423,7 +420,7 @@ export function PatternDrawingBox({
               {/* --leverage-thumb must match thumb w/h (w-5 = 1.25rem) so labels align with snap positions */}
               <div
                 className="w-full rounded-xl border-3 border-[#00E5FF] bg-[#000000]/40 shadow-[3px_3px_0_0_#00E5FF] p-2 [--leverage-thumb:1.25rem]"
-                style={{ ['--leverage-accent' as never]: NEON_COLOR }}
+                style={{ ['--leverage-accent' as never]: DRAW_COLOR }}
               >
                 <input
                   type="range"
@@ -474,7 +471,7 @@ export function PatternDrawingBox({
             {/* Entire rail matches canvas height */}
             <div
               className="w-full h-[170px] rounded-xl border-3 border-[#00E5FF] bg-[#000000]/40 shadow-[3px_3px_0_0_#00E5FF] p-2 flex flex-col gap-2 [--leverage-thumb:1.25rem]"
-              style={{ ['--leverage-accent' as never]: NEON_COLOR }}
+              style={{ ['--leverage-accent' as never]: DRAW_COLOR }}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-[12px] text-[#00E5FF]/70 font-light">
