@@ -107,7 +107,21 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Price line
+        // Price line — glow layer (wider, blurred)
+        ctx.save();
+        ctx.beginPath();
+        smoothPath(ctx, pts);
+        ctx.strokeStyle = LINE_COLOR;
+        ctx.lineWidth = 6;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.3;
+        ctx.shadowColor = LINE_COLOR;
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        ctx.restore();
+
+        // Price line — crisp layer on top
         ctx.beginPath();
         smoothPath(ctx, pts);
         ctx.strokeStyle = LINE_COLOR;

@@ -24,7 +24,16 @@ function priceDataReducer(state: PriceDataState, action: Action): PriceDataState
     case 'CONNECTED':
       return { ...state, isLoading: false, error: null };
     case 'ADD_PRICE': {
-      const newData = [...state.data, action.payload];
+      // Deduplicate: if the last point has the same timestamp, replace it
+      // instead of pushing a new one (Bybit sends multiple ticks/sec)
+      const lastIdx = state.data.length - 1;
+      let newData: PricePoint[];
+      if (lastIdx >= 0 && state.data[lastIdx].time === action.payload.time) {
+        newData = [...state.data];
+        newData[lastIdx] = action.payload;
+      } else {
+        newData = [...state.data, action.payload];
+      }
       const trimmedData = newData.length > MAX_POINTS ? newData.slice(-MAX_POINTS) : newData;
       return { data: trimmedData, isLoading: false, error: null };
     }
