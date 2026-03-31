@@ -39,7 +39,7 @@ export function TradingChart({
   });
 
   return (
-    <div className="bg-[#0a0f1a] rounded-2xl border border-white/8 overflow-hidden">
+    <div className="bg-transparent rounded-2xl border border-white/8 overflow-hidden">
       <ChartInfoBar
         price={currentPrice}
         pairSymbol={pairSymbol}
