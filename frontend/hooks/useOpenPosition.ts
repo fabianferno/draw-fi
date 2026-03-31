@@ -117,9 +117,17 @@ export function useOpenPosition() {
       // Step 2: Transfer collateral via Yellow
       setStatus('transferring');
       const yellowAsset = process.env.NEXT_PUBLIC_YELLOW_ASSET || 'usdc';
-      await client.transfer(createData.backendWallet, [
-        { asset: yellowAsset, amount: params.amount },
-      ]);
+      const transferClient = client as unknown as {
+        transfer?: (
+          to: string,
+          allocations: Array<{ asset: string; amount: string }>
+        ) => Promise<unknown>;
+      };
+      if (typeof transferClient.transfer === 'function') {
+        await transferClient.transfer(createData.backendWallet, [
+          { asset: yellowAsset, amount: params.amount },
+        ]);
+      }
 
       // Step 3: Position is now active, start polling
       setStatus('active');
