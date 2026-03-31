@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useRef } from 'react';
 import type { PredictionPoint, PredictionPath, DrawingState } from '@/types/prediction';
 
 type Action =
@@ -72,10 +72,13 @@ export function usePredictionDrawing() {
     dispatch({ type: 'FINISH_DRAWING' });
   }, []);
 
+  const currentPointsRef = useRef(state.currentPoints);
+  currentPointsRef.current = state.currentPoints;
+
   const confirmPrediction = useCallback(() => {
     dispatch({ type: 'CONFIRM_PREDICTION' });
-    return state.currentPoints;
-  }, [state.currentPoints]);
+    return currentPointsRef.current;
+  }, []);
 
   const clearPrediction = useCallback(() => {
     dispatch({ type: 'CLEAR_PREDICTION' });
