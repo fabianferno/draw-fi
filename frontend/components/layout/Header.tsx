@@ -63,7 +63,7 @@ export function Header({ showStatus, statusText }: HeaderProps) {
                 </div>
               </Link>
 
-              {/* Navigation (hidden on marketing landing) */}
+              {/* App routes: full nav (landing pitch lives in right cluster) */}
               {!isLandingPage && (
                 <nav className="hidden sm:flex items-center md:gap-10 gap-4">
                   <Link href="/predict" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
@@ -85,7 +85,17 @@ export function Header({ showStatus, statusText }: HeaderProps) {
               )}
 
               {/* Right side */}
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex pr-2 items-center justify-end gap-2 sm:gap-3 min-w-0 shrink-0">
+                {isLandingPage && (
+                  <nav className="flex items-center" aria-label="Marketing">
+                    <Link
+                      href="/pitch"
+                      className="text-sm font-medium text-white/90 hover:text-cyan-400 transition-colors"
+                    >
+                      View our Pitch Deck
+                    </Link>
+                  </nav>
+                )}
                 {isPredictPage && (
                   <motion.button
                     type="button"

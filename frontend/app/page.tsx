@@ -76,7 +76,7 @@ export default function Home() {
               </motion.p>
 
               <motion.p
-                className="text-sm sm:text-base md:text-md leading-relaxed text-white/80 text-center md:text-left"
+                className="text-sm sm:text-base md:text-md leading-relaxed text-white/80 text-center md:text-left max-w-xl mx-auto md:mx-0"
                 variants={itemVariants}
               >
                 DrawFi turns your sketch into a position: live BTC (and more) charts, micro-stakes from about $0.10, and leverage up to 2500x—settled against real price, no liquidations maze. Built on Base with Yellow Network for gasless opens (EIP-712 signatures, off-chain USDC balance)—so you deposit once and keep drawing.
