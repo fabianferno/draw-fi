@@ -4,7 +4,12 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 
-export function Footer() {
+interface FooterProps {
+  /** When false, hide in-app route links (e.g. marketing landing). */
+  showNavLinks?: boolean;
+}
+
+export function Footer({ showNavLinks = true }: FooterProps) {
   return (
     <motion.footer
       className="relative bg-[#000000] border-t-4 border-[#00E5FF] py-8 mt-auto"
@@ -32,32 +37,34 @@ export function Footer() {
           </div>
 
           {/* Links */}
-          <div className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
-            >
-              Home
-            </Link>
-            <Link
-              href="/predict"
-              className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
-            >
-              Predict
-            </Link>
-            <Link
-              href="/open-position"
-              className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
-            >
-              Positions
-            </Link>
-            <Link
-              href="/pitch"
-              className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
-            >
-              Pitch
-            </Link>
-          </div>
+          {showNavLinks ? (
+            <div className="flex items-center gap-6">
+              <Link
+                href="/"
+                className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
+              >
+                Home
+              </Link>
+              <Link
+                href="/predict"
+                className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
+              >
+                Predict
+              </Link>
+              <Link
+                href="/open-position"
+                className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
+              >
+                Positions
+              </Link>
+              <Link
+                href="/pitch"
+                className="text-[#00E5FF]/80 hover:text-[#00E5FF] text-sm font-semibold transition-colors"
+              >
+                Pitch
+              </Link>
+            </div>
+          ) : null}
 
           {/* Built with love */}
           <div className="text-[#00E5FF]/60 text-xs">

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/fabianferno/Documents/draw-fi/frontend/app -o -name *.tsx -o -name *.ts)"
+    ]
+  }
+}

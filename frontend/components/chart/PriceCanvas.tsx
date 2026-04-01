@@ -15,13 +15,21 @@ interface PriceCanvasProps {
 const AXIS_WIDTH = 56;
 // Grid line style
 const GRID_COLOR = 'rgba(255,255,255,0.04)';
-// Price line
-const LINE_COLOR = '#f0a030';
-const LINE_WIDTH = 2;
 // Crosshair
 const CROSSHAIR_COLOR = '#22c55e';
-// Live dot
-const DOT_COLOR = '#00E5FF';
+
+// Rainbow trail colors (classic Nyan Cat order: red → orange → yellow → green → blue → violet)
+const RAINBOW_COLORS = [
+  '#ff0000',
+  '#ff9900',
+  '#ffff00',
+  '#33ff00',
+  '#0099ff',
+  '#6633ff',
+];
+const BAND_HEIGHT = 3;    // Height of each rainbow band
+const BAND_GAP = 1;       // Gap between bands
+const NYAN_CAT_SCALE = 1.6; // Scale of the Nyan Cat sprite
 
 export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,12 +64,10 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
 
     for (let p = firstGrid; p <= maxP; p += gridStep) {
       const y = priceToY(p);
-      // Horizontal grid
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(chartW, y);
       ctx.stroke();
-      // Price label on right axis
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.fillText(formatPrice(p), w - 4, y);
     }
@@ -81,54 +87,73 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
       ctx.stroke();
     }
 
-    // --- Price fill gradient ---
+    // --- Sparkle stars background ---
+    const now = Date.now();
+    drawSparkles(ctx, chartW, h, now);
+
+    // --- Rainbow trail + Nyan Cat ---
     if (priceData.length > 1) {
       const visibleData = priceData.filter(
         p => p.time >= visibleTimeRange.start && p.time <= visibleTimeRange.end
       );
 
       if (visibleData.length > 1) {
-        // Convert to pixel coordinates
         const pts = visibleData.map(d => ({
           x: timeToX(d.time),
           y: priceToY(d.value),
         }));
 
-        // Area fill
-        const gradient = ctx.createLinearGradient(0, 0, 0, h);
-        gradient.addColorStop(0, 'rgba(240,160,48,0.3)');
-        gradient.addColorStop(1, 'rgba(240,160,48,0)');
+        // Densify the points for smoother rainbow bands
+        const densePts = densifyPath(pts, 2);
 
-        ctx.beginPath();
-        smoothPath(ctx, pts);
-        ctx.lineTo(pts[pts.length - 1].x, h);
-        ctx.lineTo(pts[0].x, h);
-        ctx.closePath();
-        ctx.fillStyle = gradient;
-        ctx.fill();
+        // Draw rainbow trail — 6 colored bands offset vertically from the line
+        const totalBandHeight = RAINBOW_COLORS.length * (BAND_HEIGHT + BAND_GAP);
+        for (let band = 0; band < RAINBOW_COLORS.length; band++) {
+          const offset = (band - (RAINBOW_COLORS.length - 1) / 2) * (BAND_HEIGHT + BAND_GAP);
 
-        // Price line — glow layer (wider, blurred)
+          ctx.save();
+          ctx.beginPath();
+          // Animate the trail with a wavy pattern
+          const offsetPts = densePts.map((p, i) => ({
+            x: p.x,
+            y: p.y + offset,
+          }));
+          if (offsetPts.length > 0) {
+            ctx.moveTo(offsetPts[0].x, offsetPts[0].y);
+            for (let i = 1; i < offsetPts.length; i++) {
+              ctx.lineTo(offsetPts[i].x, offsetPts[i].y);
+            }
+          }
+          ctx.strokeStyle = RAINBOW_COLORS[band];
+          ctx.lineWidth = BAND_HEIGHT;
+          ctx.lineCap = 'butt';
+          ctx.lineJoin = 'round';
+          // Subtle glow
+          ctx.shadowColor = RAINBOW_COLORS[band];
+          ctx.shadowBlur = 6;
+          ctx.globalAlpha = 0.85;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Rainbow glow under the trail
         ctx.save();
         ctx.beginPath();
         smoothPath(ctx, pts);
-        ctx.strokeStyle = LINE_COLOR;
-        ctx.lineWidth = 6;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.globalAlpha = 0.35;
-        ctx.shadowColor = LINE_COLOR;
-        ctx.shadowBlur = 24;
-        ctx.stroke();
+        ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y + totalBandHeight);
+        ctx.lineTo(pts[0].x, pts[0].y + totalBandHeight);
+        ctx.closePath();
+        const glowGrad = ctx.createLinearGradient(0, 0, 0, h);
+        glowGrad.addColorStop(0, 'rgba(255,100,200,0.15)');
+        glowGrad.addColorStop(1, 'rgba(255,100,200,0)');
+        ctx.fillStyle = glowGrad;
+        ctx.fill();
         ctx.restore();
 
-        // Price line — crisp layer on top
-        ctx.beginPath();
-        smoothPath(ctx, pts);
-        ctx.strokeStyle = LINE_COLOR;
-        ctx.lineWidth = LINE_WIDTH;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.stroke();
+        // Draw Nyan Cat at the last point
+        const lastPt = pts[pts.length - 1];
+        const bounceOffset = Math.sin((now % 400) / 400 * Math.PI * 2) * 3;
+        drawNyanCat(ctx, lastPt.x, lastPt.y + bounceOffset, NYAN_CAT_SCALE, now);
       }
     }
 
@@ -166,19 +191,10 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(badgeText, badgeX + 6, lastY);
-
-      // Pulsing live dot
-      const pulsePhase = (Date.now() % 2000) / 2000;
-      const radius = 3 + Math.sin(pulsePhase * Math.PI * 2) * 1.5;
-
-      ctx.beginPath();
-      ctx.arc(lastX, lastY, radius, 0, Math.PI * 2);
-      ctx.fillStyle = DOT_COLOR;
-      ctx.fill();
     }
   }, [priceData, coords, width, height, visibleTimeRange, visiblePriceRange, timeToX, priceToY]);
 
-  // Always mark dirty for the pulsing live dot animation
+  // Always repaint for Nyan Cat bounce animation + sparkles
   useAnimationFrame(canvasRef, draw, [priceData, coords, Date.now()]);
 
   return (
@@ -189,6 +205,152 @@ export function PriceCanvas({ priceData, coords }: PriceCanvasProps) {
     />
   );
 }
+
+// --- Nyan Cat pixel art sprite ---
+
+function drawNyanCat(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  scale: number, now: number,
+) {
+  const s = scale;
+  const px = (v: number) => v * s; // pixel size helper
+
+  // Animation frame toggle (legs alternate)
+  const frame = Math.floor((now % 300) / 150);
+
+  ctx.save();
+  ctx.translate(x - px(10), y - px(10));
+
+  // Pop-Tart body (pink with sprinkles)
+  ctx.fillStyle = '#ffcc99';
+  roundRect(ctx, px(0), px(1), px(18), px(16), px(2));
+  ctx.fill();
+
+  // Pop-Tart frosting
+  ctx.fillStyle = '#ff99aa';
+  roundRect(ctx, px(1), px(2), px(16), px(13), px(2));
+  ctx.fill();
+
+  // Sprinkles
+  ctx.fillStyle = '#ff6699';
+  fillPixel(ctx, px(4), px(5), px(1.5));
+  fillPixel(ctx, px(10), px(4), px(1.5));
+  fillPixel(ctx, px(14), px(7), px(1.5));
+  fillPixel(ctx, px(6), px(9), px(1.5));
+  fillPixel(ctx, px(12), px(11), px(1.5));
+  fillPixel(ctx, px(3), px(12), px(1.5));
+  fillPixel(ctx, px(9), px(13), px(1.5));
+
+  // Cat head (gray, to the right of tart)
+  ctx.fillStyle = '#999999';
+  // Main head
+  ctx.fillRect(px(16), px(3), px(8), px(8));
+  // Ears
+  ctx.fillRect(px(16), px(0), px(2), px(3));
+  ctx.fillRect(px(22), px(0), px(2), px(3));
+  // Inner ears
+  ctx.fillStyle = '#ff99aa';
+  fillPixel(ctx, px(16.5), px(1), px(1));
+  fillPixel(ctx, px(22.5), px(1), px(1));
+
+  // Cat eyes
+  ctx.fillStyle = '#000000';
+  fillPixel(ctx, px(18), px(6), px(1.5));
+  fillPixel(ctx, px(22), px(6), px(1.5));
+
+  // Cat mouth / cheeks
+  ctx.fillStyle = '#ff6699';
+  fillPixel(ctx, px(17), px(8.5), px(1));
+  fillPixel(ctx, px(23), px(8.5), px(1));
+
+  // Nose
+  ctx.fillStyle = '#000000';
+  fillPixel(ctx, px(20), px(7.5), px(0.8));
+
+  // Cat legs (alternate based on frame)
+  ctx.fillStyle = '#999999';
+  if (frame === 0) {
+    // Frame 1: front legs forward, back legs back
+    ctx.fillRect(px(2), px(17), px(2), px(3));
+    ctx.fillRect(px(6), px(17), px(2), px(4));
+    ctx.fillRect(px(11), px(17), px(2), px(4));
+    ctx.fillRect(px(15), px(17), px(2), px(3));
+  } else {
+    // Frame 2: legs swap
+    ctx.fillRect(px(2), px(17), px(2), px(4));
+    ctx.fillRect(px(6), px(17), px(2), px(3));
+    ctx.fillRect(px(11), px(17), px(2), px(3));
+    ctx.fillRect(px(15), px(17), px(2), px(4));
+  }
+
+  // Cat tail (wavy based on time)
+  ctx.fillStyle = '#999999';
+  const tailWave = Math.sin((now % 500) / 500 * Math.PI * 2) * 2;
+  ctx.fillRect(px(-3), px(4) + tailWave, px(4), px(2));
+  ctx.fillRect(px(-5), px(3) + tailWave, px(3), px(2));
+
+  ctx.restore();
+}
+
+function fillPixel(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  ctx.fillRect(x - size / 2, y - size / 2, size, size);
+}
+
+// --- Sparkle stars ---
+
+function drawSparkles(ctx: CanvasRenderingContext2D, w: number, h: number, now: number) {
+  // Deterministic "random" star positions that twinkle
+  const starCount = 12;
+  const seed = 42;
+
+  ctx.save();
+  for (let i = 0; i < starCount; i++) {
+    const sx = ((seed * (i + 1) * 137) % 1000) / 1000 * w;
+    const sy = ((seed * (i + 1) * 251) % 1000) / 1000 * h;
+    const phase = ((now + i * 500) % 2000) / 2000;
+    const alpha = 0.2 + Math.sin(phase * Math.PI * 2) * 0.3;
+
+    if (alpha <= 0.05) continue;
+
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.fillStyle = '#ffffff';
+    const size = 1.5 + Math.sin(phase * Math.PI) * 1;
+
+    // Draw a small cross/star shape
+    ctx.fillRect(sx - size, sy - 0.5, size * 2, 1);
+    ctx.fillRect(sx - 0.5, sy - size, 1, size * 2);
+  }
+  ctx.restore();
+}
+
+// --- Densify path for smooth rainbow bands ---
+
+function densifyPath(
+  pts: Array<{ x: number; y: number }>,
+  maxSegLen: number,
+): Array<{ x: number; y: number }> {
+  if (pts.length < 2) return pts;
+  const result: Array<{ x: number; y: number }> = [pts[0]];
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i];
+    const b = pts[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const steps = Math.max(1, Math.ceil(dist / maxSegLen));
+
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      result.push({ x: a.x + dx * t, y: a.y + dy * t });
+    }
+  }
+
+  return result;
+}
+
+// --- Helpers ---
 
 // --- Helpers ---
 

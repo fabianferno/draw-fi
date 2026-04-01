@@ -18,6 +18,7 @@ export function Header({ showStatus, statusText }: HeaderProps) {
   const pathname = usePathname();
   const { startNextStep } = useNextStep();
   const isPredictPage = pathname === '/predict';
+  const isLandingPage = pathname === '/';
 
   return (
     <>
@@ -62,24 +63,26 @@ export function Header({ showStatus, statusText }: HeaderProps) {
                 </div>
               </Link>
 
-              {/* Navigation */}
-              <nav className="hidden sm:flex items-center md:gap-10 gap-4">
-                <Link href="/predict" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
-                  Play
-                </Link>
-                <Link href="/leaderboard" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
-                  Leaderboard
-                </Link>
-                <Link href="/history" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
-                  History
-                </Link>
-                <Link href="/pitch" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
-                  Pitch
-                </Link>
-                <Link href="/portfolio" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
-                  Portfolio
-                </Link>
-              </nav>
+              {/* Navigation (hidden on marketing landing) */}
+              {!isLandingPage && (
+                <nav className="hidden sm:flex items-center md:gap-10 gap-4">
+                  <Link href="/predict" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
+                    Play
+                  </Link>
+                  <Link href="/leaderboard" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
+                    Leaderboard
+                  </Link>
+                  <Link href="/history" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
+                    History
+                  </Link>
+                  <Link href="/pitch" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
+                    Pitch
+                  </Link>
+                  <Link href="/portfolio" className=" text-sm text-white/80 hover:text-cyan-500 transition-colors">
+                    Portfolio
+                  </Link>
+                </nav>
+              )}
 
               {/* Right side */}
               <div className="flex items-center gap-2 sm:gap-3">
@@ -95,7 +98,7 @@ export function Header({ showStatus, statusText }: HeaderProps) {
                     <QuestionMarkCircleIcon className="w-6 h-6" />
                   </motion.button>
                 )}
-                <ConnectWalletButton />
+                {!isLandingPage && <ConnectWalletButton />}
 
                 {/* Status badge */}
                 {showStatus && statusText && (

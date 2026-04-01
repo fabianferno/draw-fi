@@ -1,7 +1,5 @@
 'use client';
 
-import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   PencilSquareIcon,
@@ -9,6 +7,8 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import { Header, Footer } from "@/components/layout";
+import { WaitlistForm } from "@/components/waitlist/WaitlistForm";
+import { PitchChartVisual } from "@/components/landing/PitchChartVisual";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -90,41 +90,26 @@ export default function Home() {
               </motion.p>
 
               <motion.div
-                className="flex flex-col items-center justify-center md:justify-start gap-3 sm:gap-4 pt-2 sm:flex-row w-full md:w-auto"
+                className="flex flex-col items-start justify-start gap-3 sm:gap-4 pt-2 w-full md:w-auto"
                 variants={itemVariants}
               >
-
                 <motion.div
                   whileHover={{ scale: 1.05, x: -2, y: -2 }}
                   whileTap={{ scale: 0.95, x: 2, y: 2 }}
-                  className="w-full sm:w-auto"
+                  className="w-auto"
                 >
-                  <Link
-                    href="/predict"
-                    className="inline-block w-full sm:w-auto text-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-bold text-[#00E5FF] bg-[#000000] border-4 border-[#00E5FF] rounded-xl shadow-[6px_6px_0_0_#000000] transition-all hover:shadow-[8px_8px_0_0_#000000]"
+                  <a
+                    href="#waitlist"
+                    className="inline-block w-auto text-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-bold text-[#00E5FF] bg-[#000000] border-4 border-[#00E5FF] rounded-xl shadow-[6px_6px_0_0_#000000] transition-all hover:shadow-[8px_8px_0_0_#000000]"
                   >
-                    Play Now
-                  </Link>
-                </motion.div>
-
-
-                <motion.div
-                  whileHover={{ scale: 1.05, x: -2, y: -2 }}
-                  whileTap={{ scale: 0.95, x: 2, y: 2 }}
-                  className="w-full sm:w-auto"
-                >
-                  <Link
-                    href="/leaderboard"
-                    className="inline-block w-full sm:w-auto text-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-black text-[#000000] bg-[#00E5FF]/80 border-4 border-[#000000] rounded-xl shadow-[6px_6px_0_0_#000000] transition-all hover:shadow-[8px_8px_0_0_#000000]"
-                  >
-                    Leaderboard
-                  </Link>
+                    Join waitlist
+                  </a>
                 </motion.div>
               </motion.div>
             </motion.div>
 
             <motion.div
-              className="w-full z-0 md:w-auto flex justify-center md:justify-start"
+              className="w-full z-0 md:w-auto md:max-w-[min(100%,520px)] flex justify-center md:justify-end md:flex-1"
               animate={{
                 y: [-10, 10, -10],
               }}
@@ -134,13 +119,11 @@ export default function Home() {
                 ease: [0.4, 0, 0.6, 1],
               }}
             >
-              <Image
-                src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2RraWV0aW8zcmJ6amhqeHM4ZzljNWNtcWw0OHdoM2QzYTBwN3Q2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/QsbWUyoB7YTO4ectTS/giphy.gif"
-                alt="Animated hero graphic for DrawFi"
-                width={500}
-                height={500}
-                className="w-full max-w-[500px] sm:max-w-[500px] md:w-[500px] h-auto md:h-[500px] object-contain filter hue-rotate-240"
-              />
+              <div className="w-full max-w-[500px] rounded-2xl border border-[#00E5FF]/20 bg-[#00E5FF]/4 p-4 sm:p-5 shadow-[0_0_60px_-12px_rgba(0,229,255,0.25)]">
+                <PitchChartVisual
+                  svgClassName="w-full h-[200px] sm:h-[240px] md:h-[260px]"
+                />
+              </div>
             </motion.div>
           </section>
 
@@ -247,33 +230,26 @@ export default function Home() {
                 className="mb-2 text-4xl md:text-6xl font-melodrame font-medium text-[#00E5FF] px-4"
                 style={{ textShadow: '4px 4px 0 #000000' }}
               >
-                Ready in one minute?
+                Join the waitlist
               </motion.h2>
               <p className="mb-8 sm:mb-12 max-w-xl mx-auto text-base sm:text-lg md:text-xl text-white/80 px-4">
-                Connect, draw your curve, sign once—see how your intuition stacks up on the leaderboard.
+                We&apos;re opening access in waves. Join the waitlist and we&apos;ll let you know when you can draw and play.
               </p>
               <motion.div
                 whileHover={{ scale: 1.05, x: -3, y: -3 }}
                 whileTap={{ scale: 0.95, x: 3, y: 3 }}
                 className="px-4"
               >
-                <Link
-                  href="/predict"
-                  className="flex px-8 sm:px-12 py-4 sm:py-5 text-lg sm:text-xl font-bold text-[#000000] bg-[#00E5FF] border-4 border-[#0a0a0a] rounded-xl shadow-[8px_8px_0_0_#0a0a0a] transition-all hover:shadow-[10px_10px_0_0_#0a0a0a] items-center justify-center gap-2"
-                >
-                  Play Now
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-7 sm:w-7 text-[#000000]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16l16-8-16-8z" />
-                  </svg>
-                </Link>
+                <WaitlistForm />
               </motion.div>
             </motion.div>
           </section>
+
         </div>
 
         {/* Footer */}
         <div className="relative z-10">
-          <Footer />
+          <Footer showNavLinks={false} />
         </div>
       </div>
     </div>
